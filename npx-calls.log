@@ -1,0 +1,7 @@
+NPX call intercepted: react-native init LyoMobileApp --template react-native-template-typescript
+NPX call intercepted: create-expo-app LyoMobileApp -t expo-template-typescript
+NPX call intercepted: create-expo-app@latest lyo-app --template expo-template-typescript
+NPX call intercepted: expo start --android
+NPX call intercepted: expo run:android
+NPX call intercepted: expo start
+NPX call intercepted: expo start
