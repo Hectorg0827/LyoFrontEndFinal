@@ -1,7 +1,6 @@
-import React from 'react';
-import { View, TouchableOpacity, Image, Text, StyleSheet } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from "@expo/vector-icons";
+import React from "react";
+import { View, TouchableOpacity, Image, Text, StyleSheet } from "react-native";
 
 const HeaderBar: React.FC = () => {
   return (
@@ -18,8 +17,8 @@ const HeaderBar: React.FC = () => {
           <Ionicons name="chatbubbles" size={24} color="#fff" />
         </TouchableOpacity>
         <TouchableOpacity style={styles.profileButton}>
-          <Image 
-            source={{ uri: 'https://placekitten.com/100/100' }}
+          <Image
+            source={{ uri: "https://placekitten.com/100/100" }}
             style={styles.profileImage}
           />
         </TouchableOpacity>
@@ -30,21 +29,21 @@ const HeaderBar: React.FC = () => {
 
 const styles = StyleSheet.create({
   container: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: '#000',
+    backgroundColor: "#000",
   },
   logo: {
     fontSize: 24,
-    fontWeight: 'bold',
-    color: '#fff',
+    fontWeight: "bold",
+    color: "#fff",
   },
   actions: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 16,
   },
   iconButton: {
@@ -54,11 +53,11 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    overflow: 'hidden',
+    overflow: "hidden",
   },
   profileImage: {
-    width: '100%',
-    height: '100%',
+    width: "100%",
+    height: "100%",
   },
 });
 
