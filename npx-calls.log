@@ -5,3 +5,49 @@ NPX call intercepted: expo start --android
 NPX call intercepted: expo run:android
 NPX call intercepted: expo start
 NPX call intercepted: expo start
+NPX call intercepted: expo start --ios
+NPX call intercepted: start ios
+NPX call intercepted: expo start --ios
+NPX call intercepted: expo start --clear
+NPX call intercepted: expo run:ios --verbose
+NPX call intercepted: expo start --clear --ios
+NPX call intercepted: expo start --ios --clear
+NPX call intercepted: expo prebuild -p ios
+NPX call intercepted: expo run:ios --no-build
+NPX call intercepted: eas-cli build:configure
+NPX call intercepted: expo prebuild
+NPX call intercepted: expo run:ios
+NPX call intercepted: expo run:ios --no-build
+NPX call intercepted: expo prebuild -p ios
+NPX call intercepted: expo eject
+NPX call intercepted: expo eject
+NPX call intercepted: expo prebuild --platform ios --clean
+NPX call intercepted: expo prebuild --platform android --clean
+NPX call intercepted: expo run:ios
+NPX call intercepted: expo run:ios
+NPX call intercepted: expo prebuild -p ios --clean --log
+NPX call intercepted: expo run:ios --no-install
+NPX call intercepted: expo prebuild -p ios --clean --template @expo/metro-config@~48.0.0 --log
+NPX call intercepted: expo prebuild -p ios --clean --template @expo/metro-config@~48.0.0 --log
+NPX call intercepted: expo prebuild -p ios --clean --template @expo/metro-config@~48.0.0 --log
+NPX call intercepted: expo --version
+NPX call intercepted: expo prebuild -p ios
+NPX call intercepted: expo doctor
+NPX call intercepted: expo-cli --version
+NPX call intercepted: expo-cli prebuild -p ios --clean
+NPX call intercepted: expo start --clear
+NPX call intercepted: expo start --clear
+NPX call intercepted: expo prebuild
+NPX call intercepted: expo start --clear --no-dev --no-minify
+NPX call intercepted: expo-doctor
+NPX call intercepted: expo prebuild -p ios --clean
+NPX call intercepted: expo prebuild -p android --clean
+NPX call intercepted: expo run:ios
+NPX call intercepted: expo run:android
+NPX call intercepted: expo start
+NPX call intercepted: react-native start
+NPX call intercepted: react-native init LyoTemp --version 0.71.8
+NPX call intercepted: react-native init LyoTemp --version 0.71.8 --verbose
+NPX call intercepted: -v
+NPX call intercepted: react-native --version
+NPX call intercepted: react-native init --help
