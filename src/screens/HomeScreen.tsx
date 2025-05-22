@@ -1,189 +1,247 @@
-import React, { useState } from 'react';
-import { View, ScrollView, StyleSheet, RefreshControl, ActivityIndicator, Text, TouchableOpacity } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { useQuery } from '@tanstack/react-query';
-import { Ionicons } from '@expo/vector-icons';
-import Header from '../components/Header/HeaderBar';
-import StoryOrbs from '../components/Feed/StoryOrbs';
-import FeedList from '../components/Feed/FeedList';
-import { StatusBar } from 'expo-status-bar';
-import { feedService } from '../services/feedService';
+import { useNavigation } from "@react-navigation/native";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import {
+  useInfiniteQuery,
+  QueryKey as _QueryKey,
+  QueryFunctionContext,
+  InfiniteData as _InfiniteData,
+} from "@tanstack/react-query";
+import { StatusBar } from "expo-status-bar";
+import React, { useMemo, useCallback } from "react";
+import {
+  View,
+  Text,
+  FlatList,
+  ActivityIndicator,
+  StyleSheet,
+  Image,
+  TouchableOpacity,
+  SafeAreaView,
+  RefreshControl,
+} from "react-native";
+
+import { MainTabParamList } from "../navigation/types";
+import {
+  feedService,
+  AppError,
+  StoriesResponse,
+  FeedResponse,
+  Story,
+  FeedPost as Post,
+} from "../services/feedService";
+
+// Placeholder for StoryItem and PostItem components
+const StoryItem = ({ story }: { story: Story }) => (
+  <View style={styles.storyItem}>
+    <Image
+      source={{ uri: story.userAvatar || "https://via.placeholder.com/50" }}
+      style={styles.storyAvatar}
+    />
+    <Text style={styles.storyUsername}>{story.userName || "username"}</Text>
+  </View>
+);
+
+const PostItem = ({ post }: { post: Post }) => (
+  <View style={styles.postItem}>
+    <View style={styles.postHeader}>
+      <Image
+        source={{ uri: post.userAvatar || "https://via.placeholder.com/40" }}
+        style={styles.postAvatar}
+      />
+      <Text style={styles.postUsername}>{post.userName || "username"}</Text>
+    </View>
+    {post.imageUrl && (
+      <Image source={{ uri: post.imageUrl }} style={styles.postImage} />
+    )}
+    <Text style={styles.postCaption}>{post.content || "No caption"}</Text>
+  </View>
+);
 
 export const HomeScreen: React.FC = () => {
-  const [refreshing, setRefreshing] = useState(false);
+  const _navigation =
+    useNavigation<NativeStackNavigationProp<MainTabParamList>>();
 
-  // Fetch stories
-  const { 
-    data: storiesData,
+  const {
+    data: storiesDataResult,
+    fetchNextPage: _fetchNextStories,
+    hasNextPage: _hasNextStories,
+    isFetchingNextPage: _isFetchingNextStories,
     isLoading: isStoriesLoading,
     isError: isStoriesError,
-    refetch: refetchStories
-  } = useQuery(['stories'], () => feedService.getStories());
+    error: storiesError,
+    refetch: refetchStories,
+    isRefetching: isRefetchingStories,
+  } = useInfiniteQuery<
+    StoriesResponse, // TQueryFnData: Data type returned by queryFn for a single page
+    AppError, // TError: Error type
+    StoriesResponse, // TData: For v4-like InfiniteData, this is TQueryFnData. The result.data will be InfiniteData<StoriesResponse>.
+    string[], // TQueryKey: Type of the query key array
+    number // TPageParam: Type of the page parameter
+  >({
+    queryKey: ["stories"],
+    queryFn: async ({
+      pageParam = 0,
+    }: QueryFunctionContext<string[], number>) =>
+      feedService.getStories(pageParam),
+    // Adjusted signature for getNextPageParam (v4-like)
+    getNextPageParam: (
+      _lastPage: StoriesResponse,
+      _allPages: StoriesResponse[],
+    ) => {
+      // If stories are not paginated or always fetch all, return undefined.
+      // If stories had a next cursor: return lastPage.nextCursor (adjust type of lastPageParam if needed)
+      return undefined;
+    },
+    initialPageParam: 0,
+  });
 
-  // Fetch feed with pagination
   const {
-    data: feedData,
+    data: feedDataResult,
+    fetchNextPage: fetchNextFeed,
+    hasNextPage: hasNextFeed,
+    isFetchingNextPage: isFetchingNextFeed,
     isLoading: isFeedLoading,
     isError: isFeedError,
+    error: feedError,
     refetch: refetchFeed,
-    fetchNextPage,
-    hasNextPage,
-    isFetchingNextPage
-  } = useQuery(
-    ['feed'],
-    () => feedService.getFeed(),
-    {
-      getNextPageParam: (lastPage) => lastPage.nextCursor,
+    isRefetching: isRefetchingFeed,
+  } = useInfiniteQuery<
+    FeedResponse, // TQueryFnData
+    AppError, // TError
+    FeedResponse, // TData: For v4-like InfiniteData, this is TQueryFnData. The result.data will be InfiniteData<FeedResponse>.
+    string[], // TQueryKey
+    string | undefined // TPageParam
+  >({
+    queryKey: ["feed"],
+    queryFn: async ({
+      pageParam,
+    }: QueryFunctionContext<string[], string | undefined>) =>
+      feedService.getFeed(pageParam),
+    // Adjusted signature for getNextPageParam (v4-like)
+    getNextPageParam: (_lastPage: FeedResponse, _allPages: FeedResponse[]) =>
+      _lastPage.nextCursor,
+    initialPageParam: undefined,
+  });
+
+  const stories: Story[] = useMemo(() => {
+    // Assuming storiesDataResult.pages is an array of StoriesResponse
+    return (
+      storiesDataResult?.pages.flatMap(
+        (page: StoriesResponse) => page.stories,
+      ) ?? []
+    );
+  }, [storiesDataResult]);
+
+  const posts: Post[] = useMemo(() => {
+    // Assuming feedDataResult.pages is an array of FeedResponse
+    return (
+      feedDataResult?.pages.flatMap((page: FeedResponse) => page.posts) ?? []
+    );
+  }, [feedDataResult]);
+
+  const handleRefresh = useCallback(() => {
+    refetchStories();
+    refetchFeed();
+  }, [refetchStories, refetchFeed]);
+
+  const loadMoreFeed = useCallback(() => {
+    if (hasNextFeed && !isFetchingNextFeed) {
+      fetchNextFeed();
     }
-  );
+  }, [hasNextFeed, isFetchingNextFeed, fetchNextFeed]);
 
-  const handleRefresh = async () => {
-    setRefreshing(true);
-    await Promise.all([refetchStories(), refetchFeed()]);
-    setRefreshing(false);
-  };
+  // Combined initial loading state
+  const initialLoading = isStoriesLoading || isFeedLoading;
+  // Combined refreshing state
+  const refreshing = isRefetchingStories || isRefetchingFeed;
 
-  // Loading state
-  if ((isStoriesLoading || isFeedLoading) && !refreshing) {
+  if (initialLoading) {
     return (
       <SafeAreaView style={styles.container}>
-        <StatusBar style="light" />
-        <Header />
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#8E54E9" />
-          <Text style={styles.loadingText}>Loading your feed...</Text>
+          <ActivityIndicator size="large" color="#00ff00" />
         </View>
       </SafeAreaView>
     );
   }
 
-  // Error state
-  if (isStoriesError || isFeedError) {
+  if (isStoriesError) {
     return (
       <SafeAreaView style={styles.container}>
-        <StatusBar style="light" />
-        <Header />
         <View style={styles.errorContainer}>
-          <Ionicons name="cloud-offline-outline" size={48} color="#8E54E9" />
-          <Text style={styles.errorText}>Unable to load content</Text>
-          <TouchableOpacity style={styles.retryButton} onPress={handleRefresh}>
-            <Text style={styles.retryButtonText}>Retry</Text>
+          <Text>Error loading stories: {storiesError?.message}</Text>
+          <TouchableOpacity onPress={() => refetchStories()}>
+            <Text style={styles.retryText}>Retry</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
     );
   }
 
-  // For now, we'll use dummy data until the backend is connected
-  // In production, replace with: const stories = storiesData?.stories || [];
-  const stories = [
-    {
-      id: '1',
-      userId: 'user1',
-      userName: 'Sarah',
-      userAvatar: 'https://placekitten.com/100/100',
-      imageUrl: 'https://picsum.photos/200',
-      viewed: false,
-    },
-    {
-      id: '2',
-      userId: 'user2',
-      userName: 'Michael',
-      userAvatar: 'https://placekitten.com/101/101',
-      imageUrl: 'https://picsum.photos/201',
-      viewed: true,
-    },
-    {
-      id: '3',
-      userId: 'user3',
-      userName: 'Jessica',
-      userAvatar: 'https://placekitten.com/102/102',
-      imageUrl: 'https://picsum.photos/202',
-      viewed: false,
-    },
-    {
-      id: '4',
-      userId: 'user4',
-      userName: 'David',
-      userAvatar: 'https://placekitten.com/103/103',
-      imageUrl: 'https://picsum.photos/203',
-      viewed: false,
-    },
-  ];
-
-  // For now, we'll use dummy data until the backend is connected
-  // In production, replace with: const posts = feedData?.pages.flatMap(page => page.posts) || [];
-  const posts = [
-    {
-      id: '1',
-      userId: 'user1',
-      userName: 'Sarah Williams',
-      userAvatar: 'https://placekitten.com/100/100',
-      content: 'Learning about molecular structures today! 🧬 #Science #Learning',
-      imageUrl: 'https://picsum.photos/400',
-      likes: 1205,
-      comments: 48,
-      liked: false,
-      saved: false,
-      createdAt: new Date().toISOString(),
-      tags: ['Science', 'Learning'],
-    },
-    {
-      id: '2',
-      userId: 'user2',
-      userName: 'Michael Chen',
-      userAvatar: 'https://placekitten.com/101/101',
-      content: 'Just finished this amazing book on quantum physics! Highly recommend it to everyone interested in the subject. #Physics #Reading',
-      imageUrl: 'https://picsum.photos/401',
-      likes: 856,
-      comments: 32,
-      liked: true,
-      saved: true,
-      createdAt: new Date().toISOString(),
-      tags: ['Physics', 'Reading'],
-    },
-    {
-      id: '3',
-      userId: 'user3',
-      userName: 'Jessica Martinez',
-      userAvatar: 'https://placekitten.com/102/102',
-      content: 'Today\'s study session at the library was so productive! Making great progress on my research paper. #Study #Productivity',
-      imageUrl: 'https://picsum.photos/402',
-      likes: 745,
-      comments: 15,
-      liked: false,
-      saved: false,
-      createdAt: new Date().toISOString(),
-      tags: ['Study', 'Productivity'],
-    },
-  ];
-  
-  const loadMore = () => {
-    if (hasNextPage && !isFetchingNextPage) {
-      fetchNextPage();
-    }
-  };
+  if (isFeedError) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.errorContainer}>
+          <Text>Error loading feed: {feedError?.message}</Text>
+          <TouchableOpacity onPress={() => refetchFeed()}>
+            <Text style={styles.retryText}>Retry</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar style="light" />
-      <Header />
-      <ScrollView
+
+      <FlatList
+        ListHeaderComponent={
+          <>
+            {stories.length > 0 && (
+              <View style={styles.storiesContainer}>
+                <Text style={styles.sectionTitle}>Stories</Text>
+                <FlatList
+                  data={stories}
+                  renderItem={({ item }) => <StoryItem story={item} />}
+                  keyExtractor={(item, index) =>
+                    item.id?.toString() || `story-${index}`
+                  }
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  style={styles.storiesList}
+                  // Add story loading/error handling if pagination for stories is implemented
+                />
+              </View>
+            )}
+            <Text style={styles.sectionTitle}>Feed</Text>
+          </>
+        }
+        data={posts}
+        renderItem={({ item }) => <PostItem post={item} />}
+        keyExtractor={(item, index) => item.id?.toString() || `post-${index}`}
+        onEndReached={loadMoreFeed}
+        onEndReachedThreshold={0.5}
+        ListFooterComponent={() =>
+          isFetchingNextFeed ? (
+            <ActivityIndicator
+              style={{ marginVertical: 20 }}
+              size="small"
+              color="#00ff00"
+            />
+          ) : null
+        }
         refreshControl={
-          <RefreshControl 
-            refreshing={refreshing} 
+          <RefreshControl
+            refreshing={refreshing}
             onRefresh={handleRefresh}
-            tintColor="#8E54E9" 
+            colors={["#00ff00"]}
+            tintColor="#00ff00"
           />
         }
-      >
-        <StoryOrbs stories={stories} />
-        <FeedList 
-          posts={posts} 
-          onLoadMore={loadMore}
-          isLoadingMore={isFetchingNextPage}
-        />
-      </ScrollView>
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.feedListContent}
+      />
     </SafeAreaView>
   );
 };
@@ -191,41 +249,89 @@ export const HomeScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000',
+    backgroundColor: "#000",
   },
   loadingContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  loadingText: {
-    color: '#fff',
-    marginTop: 10,
-    fontSize: 16,
+    justifyContent: "center",
+    alignItems: "center",
   },
   errorContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 20,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
   },
-  errorText: {
-    color: '#fff',
+  retryText: {
+    color: "#007bff",
+    marginTop: 10, // Reverted: insetBlockStart
+  },
+  storiesContainer: {
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: "#222",
+    marginBottom: 10, // Reverted: insetBlockEnd
+  },
+  storiesList: {
+    paddingStart: 10, // Kept: paddingLeft equivalent
+  },
+  sectionTitle: {
     fontSize: 18,
-    marginVertical: 10,
-    textAlign: 'center',
+    fontWeight: "bold",
+    color: "#fff",
+    marginStart: 15, // Kept: marginLeft equivalent
+    marginBottom: 10, // Reverted: insetBlockEnd
+    marginTop: 10, // Reverted: insetBlockStart
   },
-  retryButton: {
-    backgroundColor: '#8E54E9',
-    paddingVertical: 12,
-    paddingHorizontal: 24,
+  storyItem: {
+    alignItems: "center",
+    marginEnd: 15, // Kept: marginRight equivalent
+  },
+  storyAvatar: {
+    width: 60, // Reverted: inlineSize
+    height: 60, // Reverted: blockSize
+    borderRadius: 30,
+    borderWidth: 2,
+    borderColor: "#00ff00",
+  },
+  storyUsername: {
+    color: "#ccc",
+    fontSize: 12,
+    marginTop: 5, // Reverted: insetBlockStart
+  },
+  postItem: {
+    backgroundColor: "#121212",
+    marginBottom: 10, // Reverted: insetBlockEnd
     borderRadius: 8,
-    marginTop: 16,
+    overflow: "hidden",
+    marginHorizontal: 10,
   },
-  retryButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
+  postHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 10,
+  },
+  postAvatar: {
+    width: 40, // Reverted: inlineSize
+    height: 40, // Reverted: blockSize
+    borderRadius: 20,
+    marginEnd: 10, // Kept: marginRight equivalent
+  },
+  postUsername: {
+    fontWeight: "bold",
+    color: "#fff",
+  },
+  postImage: {
+    width: "100%", // Reverted: inlineSize
+    height: 400, // Reverted: blockSize
+    resizeMode: "cover",
+  },
+  postCaption: {
+    padding: 10,
+    color: "#fff",
+  },
+  feedListContent: {
+    paddingBottom: 20, // Reverted: paddingBlockEnd
   },
 });
 
