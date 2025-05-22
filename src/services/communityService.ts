@@ -1,4 +1,4 @@
-import { api } from './api';
+import { api } from "./api";
 
 export interface Event {
   id: string;
@@ -49,62 +49,71 @@ export const communityService = {
   async getEvents(
     latitude: number,
     longitude: number,
-    radiusInKm: number = 10
+    radiusInKm = 10,
   ): Promise<Event[]> {
-    return api.get<Event[]>('/events', { latitude, longitude, radius: radiusInKm });
+    return api.get<Event[]>("/events", {
+      latitude,
+      longitude,
+      radius: radiusInKm,
+    });
   },
-  
+
   // Get event details
   async getEventDetails(eventId: string): Promise<Event> {
     return api.get<Event>(`/events/${eventId}`);
   },
-  
+
   // RSVP to an event
   async attendEvent(eventId: string): Promise<void> {
     return api.post(`/events/${eventId}/attend`);
   },
-  
+
   // Cancel RSVP
   async unattendEvent(eventId: string): Promise<void> {
     return api.delete(`/events/${eventId}/attend`);
   },
-  
+
   // Get communities near location
   async getCommunities(
     latitude: number,
     longitude: number,
-    radiusInKm: number = 10
+    radiusInKm = 10,
   ): Promise<Community[]> {
-    return api.get<Community[]>('/communities', {
+    return api.get<Community[]>("/communities", {
       latitude,
       longitude,
-      radius: radiusInKm
+      radius: radiusInKm,
     });
   },
-  
+
   // Get community details with posts
   async getCommunityDetails(communityId: string): Promise<{
     community: Community;
     posts: Post[];
   }> {
-    return api.get<{community: Community; posts: Post[]}>(`/communities/${communityId}`);
+    return api.get<{ community: Community; posts: Post[] }>(
+      `/communities/${communityId}`,
+    );
   },
-  
+
   // Join a community
   async joinCommunity(communityId: string): Promise<void> {
     return api.post(`/communities/${communityId}/join`);
   },
-  
+
   // Leave a community
   async leaveCommunity(communityId: string): Promise<void> {
     return api.delete(`/communities/${communityId}/join`);
   },
-  
+
   // Create a post in a community
-  async createPost(communityId: string, data: {
-    content: string;
-    imageUrl?: string;
-  }): Promise<Post> {
+  async createPost(
+    communityId: string,
+    data: {
+      content: string;
+      imageUrl?: string;
+    },
+  ): Promise<Post> {
     return api.post<Post>(`/communities/${communityId}/posts`, data);
-  }
+  },
 };
