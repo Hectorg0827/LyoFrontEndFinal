@@ -1,417 +1,580 @@
-import { Platform } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { OPENAI_API_KEY } from '@env';
+import {
+  USE_BACKEND_API as ENV_USE_BACKEND_API,
+  API_TIMEOUT as ENV_API_TIMEOUT,
+  STORAGE_PREFIX as ENV_STORAGE_PREFIX,
+} from "@env";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { Platform } from "react-native";
+// Environment variables: USE_BACKEND_API, API_TIMEOUT, STORAGE_PREFIX. No LLM keys here.
 
-// Types for service responses
-export interface CourseModule {
-  id: string;
-  title: string;
-  description: string;
-  duration: string;
-  resources: string[];
-  completed: boolean;
+import RNFS from "react-native-fs"; // Import react-native-fs
+
+import { audioRecordingService } from "./audioRecordingService";
+import {
+  avatarApiService,
+  Course as ApiCourse,
+  CourseModule as ApiCourseModule,
+  AvatarMessageResponse as ApiMessage,
+  CourseGenerationRequest,
+  RecommendationsRequestParams,
+  UserPreferences as ApiUserPreferences,
+  RecommendationsResponse,
+} from "./avatarApiService";
+import {
+  ErrorHandler,
+  ErrorType,
+  AppError as AppErrorClass,
+} from "./errorHandler";
+// avatarApiService is the gateway to LyoBackendNew
+
+const USE_BACKEND_API = ENV_USE_BACKEND_API === "true";
+const API_TIMEOUT = parseInt(ENV_API_TIMEOUT || "15000", 10); // Default to 15 seconds
+const STORAGE_PREFIX = ENV_STORAGE_PREFIX || "lyoApp_";
+
+// Types for service responses (can alias from apiService or define if structure differs)
+export interface CourseModule extends ApiCourseModule {}
+export interface Course extends ApiCourse {}
+export interface Message extends ApiMessage {
+  sender: "user" | "lyo" | "assistant";
 }
 
-export interface Course {
-  id: string;
-  title: string;
-  description: string;
-  modules: CourseModule[];
-  level: 'beginner' | 'intermediate' | 'advanced';
-  duration: string;
-  progress: number;
-}
-
-export interface Message {
-  id: string;
-  text: string;
-  sender: 'user' | 'lyo';
-  timestamp: Date;
-}
-
-// User preferences interface
-export interface UserPreferences {
-  voiceEnabled: boolean;
-  animationsEnabled: boolean;
-  avatarColor: string;
-  voiceRate: number;
-  voicePitch: number;
-  learningInterests: string[];
-  courseHistory: string[];
+// User preferences interface - Extends ApiUserPreferences
+export interface UserPreferences extends ApiUserPreferences {
+  // Frontend specific or extended fields can be added here if necessary
 }
 
 // Storage keys
 const STORAGE_KEYS = {
-  PREFERENCES: 'lyo_user_preferences',
-  COURSE_HISTORY: 'lyo_course_history',
-  CHAT_HISTORY: 'lyo_chat_history',
+  PREFERENCES: `${STORAGE_PREFIX}user_preferences`,
+  // courseHistory is part of UserPreferences, no separate key needed if managed within prefs object
+  CHAT_HISTORY: `${STORAGE_PREFIX}chat_history`,
+  SESSION_ID: `${STORAGE_PREFIX}conversation_session`,
 };
 
-// Mock API endpoints - in a real app, these would connect to a backend
-const API_ENDPOINTS = {
-  generateResponse: '/api/avatar/chat',
-  generateCourse: '/api/avatar/course',
-  getSuggestions: '/api/avatar/suggestions',
-  transcribeAudio: '/api/avatar/transcribe',
-};
-
-// OpenAI API configuration
-const AI_CONFIG = {
-  apiUrl: 'https://api.openai.com/v1/chat/completions',
-  model: 'gpt-4o',
-  systemPrompt: 'You are Lyo, an AI learning assistant designed to help users discover educational content and create personalized learning paths. Be concise, helpful, and educational in your responses.',
-};
-
-/**
- * Service for handling avatar-related AI operations
- */
 class AvatarService {
-  // Default user preferences
   private defaultPreferences: UserPreferences = {
     voiceEnabled: true,
     animationsEnabled: true,
-    avatarColor: '#8E54E9',
+    avatarColor: "#8E54E9",
     voiceRate: 1.0,
     voicePitch: 1.0,
     learningInterests: [],
-    courseHistory: [],
+    courseHistory: [], // Part of ApiUserPreferences, so it's included
+    accessibilityMode: false,
+    subtitlesEnabled: false,
+    avatarSize: "medium",
+    avatarPersonality: "friendly",
+    autoHideAvatar: false,
+    preferredLanguage: "en-US",
+    notificationSettings: {
+      newCourseRecommendations: true,
+      studyReminders: false,
+      communityUpdates: false,
+    },
+    theme: "system",
+    // Any other fields from ApiUserPreferences should have defaults if not optional
   };
 
-  /**
-   * Generate a response from the AI avatar using OpenAI API
-   * @param message The user's message
-   * @returns A promise that resolves to the AI's response
-   */
-  async generateResponse(message: string): Promise<string> {
+  // Method to generate a response from the avatar (via backend)
+  async generateResponse(
+    message: string,
+    conversationHistory?: Message[],
+  ): Promise<string> {
     try {
-      // First try to use real OpenAI API if key is available
-      if (OPENAI_API_KEY) {
-        return await this.callOpenAI(message);
+      if (!message || message.trim() === "") {
+        throw new AppErrorClass(
+          ErrorType.Validation,
+          "Message cannot be empty.",
+        );
       }
-      
-      // Fall back to mock response if no API key
-      await this.simulateNetworkDelay();
-      return this.mockResponseGeneration(message);
-    } catch (error) {
-      console.error('Error generating avatar response:', error);
-      return "I'm having trouble connecting right now. Please try again later.";
+
+      if (USE_BACKEND_API) {
+        try {
+          const sessionId = await this.getOrCreateSessionId();
+          console.log(
+            `Sending message to backend with session ID: ${sessionId}, message: "${message}"`,
+          );
+          const response = await avatarApiService.sendMessage(
+            message,
+            sessionId,
+          );
+          console.log("Received response from backend:", response);
+          return response.text;
+        } catch (backendError: any) {
+          ErrorHandler.processError(
+            backendError,
+            "generateResponse - backend_error",
+          );
+          const errorMessage =
+            backendError instanceof Error
+              ? backendError.message
+              : String(backendError);
+          console.warn(
+            `Backend API failed for generateResponse. Falling back to mock response. Error: ${errorMessage}`,
+          );
+          await this.simulateNetworkDelay();
+          return this.mockResponseGeneration(message); // Fallback to mock
+        }
+      } else {
+        console.log(
+          "USE_BACKEND_API is false. Using mock response for generateResponse.",
+        );
+        await this.simulateNetworkDelay();
+        return this.mockResponseGeneration(message);
+      }
+    } catch (error: any) {
+      if (error instanceof AppErrorClass) {
+        throw error;
+      }
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      console.error(`Error in generateResponse: ${errorMessage}`, error);
+      throw ErrorHandler.processError(error, "generateResponse - main");
     }
   }
 
-  /**
-   * Call OpenAI API to generate a response
-   * @param userMessage The user's message
-   * @returns The AI-generated response
-   */
-  private async callOpenAI(userMessage: string): Promise<string> {
+  private async getOrCreateSessionId(): Promise<string> {
     try {
-      const response = await fetch(AI_CONFIG.apiUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${OPENAI_API_KEY}`,
-        },
-        body: JSON.stringify({
-          model: AI_CONFIG.model,
-          messages: [
-            { role: 'system', content: AI_CONFIG.systemPrompt },
-            { role: 'user', content: userMessage }
-          ],
-          max_tokens: 250,
-          temperature: 0.7,
-        }),
-      });
-
-      const data = await response.json();
-      
-      if (data.error) {
-        throw new Error(data.error.message);
+      const sessionId = await AsyncStorage.getItem(STORAGE_KEYS.SESSION_ID);
+      if (sessionId) {
+        return sessionId;
       }
-      
-      return data.choices[0]?.message?.content || 'I apologize, but I could not generate a response.';
+      const newSessionId = `session_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+      await AsyncStorage.setItem(STORAGE_KEYS.SESSION_ID, newSessionId);
+      console.log(`New session ID created: ${newSessionId}`);
+      return newSessionId;
     } catch (error) {
-      console.error('OpenAI API error:', error);
-      throw error;
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      console.error(`Error managing session ID: ${errorMessage}`, error);
+      ErrorHandler.processError(error, "getOrCreateSessionId");
+      return `temp_session_${Date.now()}`; // Fallback temporary ID
     }
   }
 
-  /**
-   * Generate a personalized course based on a topic and difficulty using AI
-   * @param topic The course topic
-   * @param difficulty The course difficulty level
-   * @returns A promise that resolves to a Course object
-   */
   async generateCourse(
-    topic: string, 
-    difficulty: 'beginner' | 'intermediate' | 'advanced' = 'beginner'
+    topic: string,
+    userInterests?: string[],
+    difficultyLevel?: "beginner" | "intermediate" | "advanced",
   ): Promise<Course> {
     try {
-      // Try to use OpenAI for sophisticated course generation
-      if (OPENAI_API_KEY) {
-        const prompt = `Create a detailed ${difficulty} level course on "${topic}" with 4-6 modules. 
-        Each module should have a title, description, duration, and list of resources.`;
-        
-        const aiResponse = await this.callOpenAI(prompt);
-        
-        // In a real implementation, parse the AI response into a structured course
-        // For now, we'll fall back to the mock implementation
-        console.log('AI course generation response:', aiResponse);
+      if (USE_BACKEND_API) {
+        const request: CourseGenerationRequest = {
+          topic,
+          difficulty: difficultyLevel || "beginner",
+        };
+        if (userInterests && userInterests.length > 0) {
+          request.preferred_resources = [...userInterests]; // Create a copy of the array
+        }
+        console.log(
+          "Attempting to generate course via backend with request:",
+          JSON.stringify(request),
+        );
+        const course = await avatarApiService.generateCourse(request);
+        console.log("Successfully generated course via backend:", course);
+        return course;
+      } else {
+        console.log(
+          "USE_BACKEND_API is false. Using mock response for generateCourse.",
+        );
+        await this.simulateNetworkDelay();
+        return this.mockCourseGeneration(topic);
       }
-      
-      // Use mock implementation for now
-      await this.simulateNetworkDelay(2000);
-      
-      const course = {
-        id: Date.now().toString(),
-        title: `${topic} Fundamentals`,
-        description: `A comprehensive course on ${topic} designed for ${difficulty} learners. This course covers essential concepts and practical applications.`,
-        level: difficulty,
-        duration: difficulty === 'beginner' ? '4 weeks' : difficulty === 'intermediate' ? '6 weeks' : '8 weeks',
-        progress: 0,
-        modules: [
-          {
-            id: '1',
-            title: `Introduction to ${topic}`,
-            description: `Learn the basic concepts and principles of ${topic}.`,
-            duration: '1 week',
-            resources: ['Video lectures', 'Interactive quizzes', 'Reading materials'],
-            completed: false,
-          },
-          {
-            id: '2',
-            title: `${topic} Theory and Concepts`,
-            description: 'Dive deeper into theoretical frameworks and core concepts.',
-            duration: '1 week',
-            resources: ['Video lectures', 'Case studies', 'Discussion forums'],
-            completed: false,
-          },
-          {
-            id: '3',
-            title: `Practical ${topic} Applications`,
-            description: 'Apply your knowledge to real-world scenarios and problems.',
-            duration: '1 week',
-            resources: ['Project work', 'Labs', 'Peer review sessions'],
-            completed: false,
-          },
-          {
-            id: '4',
-            title: `Advanced ${topic} Topics`,
-            description: 'Explore cutting-edge developments and specialized areas.',
-            duration: '1 week',
-            resources: ['Expert interviews', 'Research papers', 'Final project'],
-            completed: false,
-          },
-        ],
-      };
-      
-      // Save to course history
-      await this.addToCourseHistory(topic);
-      
-      return course;
-    } catch (error) {
-      console.error('Error generating course:', error);
-      throw new Error('Failed to generate course. Please try again later.');
-    }
-  }
-
-  /**
-   * Get learning suggestions based on user interests or history using AI
-   * @param interests Array of user interests
-   * @returns A promise that resolves to an array of learning suggestions
-   */
-  async getLearningRecommendations(interests: string[] = []): Promise<string[]> {
-    try {
-      const userPrefs = await this.getUserPreferences();
-      const userInterests = userPrefs?.learningInterests || interests;
-      const courseHistory = userPrefs?.courseHistory || [];
-      
-      // If we have an OpenAI key, get personalized recommendations
-      if (OPENAI_API_KEY) {
-        const prompt = `Based on these interests: ${userInterests.join(', ')} 
-        and past courses: ${courseHistory.join(', ')}, 
-        suggest 5 learning topics that would be valuable for me to explore next. 
-        Just list the topics as a comma-separated list without explanation.`;
-        
-        const aiResponse = await this.callOpenAI(prompt);
-        
-        // Parse the response (assuming it's a comma-separated list)
-        return aiResponse.split(',').map(item => item.trim());
-      }
-      
-      // Fall back to mock recommendations
-      await this.simulateNetworkDelay();
-      
-      // For demonstration, return fixed recommendations plus topic-based ones
-      const baseRecommendations = [
-        'Quantum Physics for Beginners',
-        'Introduction to Machine Learning',
-        'World History: Ancient Civilizations',
-      ];
-      
-      // Add interest-based recommendations
-      const interestRecommendations = userInterests.map(interest => 
-        `${interest} Masterclass`
+    } catch (error: any) {
+      console.error(
+        `Error in generateCourse (topic: \"${topic}\", USE_BACKEND_API: ${USE_BACKEND_API}):`,
+        error,
       );
-      
-      return [...baseRecommendations, ...interestRecommendations];
-    } catch (error) {
-      console.error('Error getting learning recommendations:', error);
-      return ['Quantum Physics', 'Machine Learning', 'History'];
+      ErrorHandler.processError(error, "generateCourse");
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      console.warn(
+        `Falling back to mock course generation for topic: \"${topic}\". Error details: ${errorMessage}`,
+      );
+      return this.mockCourseGeneration(topic);
     }
   }
 
-  /**
-   * Start voice recognition
-   * In a real implementation, this would connect to a speech-to-text API
-   * @returns A promise that resolves to the recognized text
-   */
-  async startVoiceRecognition(): Promise<string> {
-    // In a real app, this would activate the microphone and start listening
-    await this.simulateNetworkDelay(2000);
-    
-    // Return some simulated recognized text
-    const sampleTexts = [
-      "I want to learn about quantum physics",
-      "Can you recommend some history courses?",
-      "Help me create a course on machine learning",
-      "What are the latest topics in biology?",
-      "I'd like to improve my writing skills"
-    ];
-    
-    return sampleTexts[Math.floor(Math.random() * sampleTexts.length)];
-  }
-
-  /**
-   * Stop voice recognition
-   */
-  stopVoiceRecognition(): void {
-    // In a real app, this would stop the microphone and cancel listening
-    console.log('Voice recognition stopped');
-  }
-
-  /**
-   * Save user preferences to persistent storage
-   * @param preferences The user preferences to save
-   */
-  async saveUserPreferences(preferences: UserPreferences): Promise<void> {
+  async getLearningRecommendations(
+    interests: string[],
+    currentProgress?: any,
+  ): Promise<string[]> {
     try {
+      if (USE_BACKEND_API) {
+        const params: RecommendationsRequestParams = { interests };
+        // if (currentProgress) { params.current_progress = currentProgress; } // Example if API supports
+        console.log(
+          "Attempting to get recommendations via backend with params:",
+          JSON.stringify(params),
+        );
+        const response: RecommendationsResponse =
+          await avatarApiService.getRecommendations(params);
+        console.log(
+          "Successfully received recommendations from backend:",
+          response,
+        );
+
+        if (response.topics && response.topics.length > 0) {
+          return response.topics;
+        }
+        if (response.courses && response.courses.length > 0) {
+          return response.courses
+            .map((c) => c.title || c.name || "Unknown Recommendation")
+            .filter((t) => t !== "Unknown Recommendation");
+        }
+        return [];
+      } else {
+        console.log(
+          "USE_BACKEND_API is false. Using mock response for getLearningRecommendations.",
+        );
+        await this.simulateNetworkDelay();
+        return [
+          "Mock: Quantum Computing",
+          "Mock: Stoic Philosophy",
+          "Mock: Advanced JavaScript",
+        ];
+      }
+    } catch (error: any) {
+      ErrorHandler.processError(error, "getLearningRecommendations");
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      console.warn(
+        `Error in getLearningRecommendations, falling back to mock. Error: ${errorMessage}`,
+        error,
+      );
+      return ["Mock Error: Topic 1", "Mock Error: Topic 2"];
+    }
+  }
+
+  async startVoiceRecognition(audioUri?: string): Promise<string> {
+    try {
+      if (USE_BACKEND_API) {
+        if (audioUri) {
+          console.log(
+            `Attempting to transcribe audio via backend from URI: ${audioUri}`,
+          );
+          const audioBase64 = await RNFS.readFile(audioUri, "base64");
+          const { text } = await avatarApiService.transcribeVoice(audioBase64);
+          console.log(
+            "Successfully transcribed audio via backend. Text:",
+            text,
+          );
+          return text;
+        } else {
+          console.warn(
+            "startVoiceRecognition (backend) called without audioUri. Falling back to mock.",
+          );
+          await this.simulateNetworkDelay();
+          return this.mockTranscribeSpeech();
+        }
+      }
+      console.log(
+        "USE_BACKEND_API is false. Using mock response for startVoiceRecognition.",
+      );
+      await this.simulateNetworkDelay();
+      return this.mockTranscribeSpeech(audioUri);
+    } catch (error: any) {
+      ErrorHandler.processError(error, "startVoiceRecognition");
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      console.warn(
+        `Error in startVoiceRecognition, falling back to mock. Error: ${errorMessage}`,
+        error,
+      );
+      await this.simulateNetworkDelay();
+      return this.mockTranscribeSpeech(audioUri);
+    }
+  }
+
+  async speakText(text: string, voiceOptions?: any): Promise<void> {
+    try {
+      if (USE_BACKEND_API) {
+        console.log(
+          `Attempting to synthesize speech via backend for text: \"${text}\"`,
+        );
+        await avatarApiService.speakText(text, voiceOptions);
+        console.log(
+          "Successfully synthesized speech via backend (or request sent).",
+        );
+        return;
+      }
+      console.log(
+        "USE_BACKEND_API is false. Using mock response for speakText.",
+      );
+      this.mockSpeakText(text, voiceOptions);
+    } catch (error: any) {
+      ErrorHandler.processError(error, "speakText");
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      console.warn(
+        `Error in speakText, falling back to mock. Error: ${errorMessage}`,
+        error,
+      );
+      this.mockSpeakText(text, voiceOptions);
+    }
+  }
+
+  async getUserPreferences(): Promise<UserPreferences> {
+    try {
+      if (USE_BACKEND_API) {
+        try {
+          console.log("Attempting to fetch user preferences from backend.");
+          const prefsFromApi = await avatarApiService.getUserPreferences();
+          console.log(
+            "Successfully fetched user preferences from backend:",
+            prefsFromApi,
+          );
+          const prefsToStore: UserPreferences = {
+            ...this.defaultPreferences,
+            ...prefsFromApi,
+          };
+          await AsyncStorage.setItem(
+            STORAGE_KEYS.PREFERENCES,
+            JSON.stringify(prefsToStore),
+          );
+          return prefsToStore;
+        } catch (backendError: any) {
+          ErrorHandler.processError(
+            backendError,
+            "getUserPreferences - backend_error",
+          );
+          const errorMessage =
+            backendError instanceof Error
+              ? backendError.message
+              : String(backendError);
+          console.warn(
+            `Failed to fetch preferences from backend. Trying local cache. Error: ${errorMessage}`,
+          );
+        }
+      }
+      console.log("Loading user preferences from local storage.");
+      const prefsString = await AsyncStorage.getItem(STORAGE_KEYS.PREFERENCES);
+      if (prefsString) {
+        console.log("Found preferences in local storage.");
+        const localPrefs = JSON.parse(prefsString) as Partial<UserPreferences>;
+        return { ...this.defaultPreferences, ...localPrefs };
+      } else {
+        console.log(
+          "No preferences found in local storage, returning default preferences.",
+        );
+        return { ...this.defaultPreferences };
+      }
+    } catch (error: any) {
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      console.error(
+        `Error retrieving user preferences: ${errorMessage}`,
+        error,
+      );
+      ErrorHandler.processError(
+        new AppErrorClass(
+          ErrorType.Storage,
+          "Error retrieving user preferences",
+          error,
+        ),
+        "getUserPreferences - main",
+      );
+      return { ...this.defaultPreferences };
+    }
+  }
+
+  async saveUserPreferences(prefs: UserPreferences): Promise<void> {
+    try {
+      if (
+        typeof prefs.voiceEnabled !== "boolean" ||
+        typeof prefs.animationsEnabled !== "boolean"
+      ) {
+        throw new AppErrorClass(
+          ErrorType.Validation,
+          "Invalid preference types.",
+        );
+      }
+
+      const prefsForApi: ApiUserPreferences = prefs;
+
+      if (USE_BACKEND_API) {
+        try {
+          console.log(
+            "Attempting to save user preferences to backend:",
+            prefsForApi,
+          );
+          await avatarApiService.saveUserPreferences(prefsForApi);
+          console.log("Successfully saved user preferences to backend.");
+          await AsyncStorage.setItem(
+            STORAGE_KEYS.PREFERENCES,
+            JSON.stringify(prefs),
+          );
+          console.log(
+            "Saved user preferences to local storage after backend success.",
+          );
+          return;
+        } catch (backendError: any) {
+          ErrorHandler.processError(
+            backendError,
+            "saveUserPreferences - backend_error",
+          );
+          const errorMessage =
+            backendError instanceof Error
+              ? backendError.message
+              : String(backendError);
+          console.warn(
+            `Failed to save preferences to backend. Saving locally only. Error: ${errorMessage}`,
+          );
+        }
+      }
+      console.log("Saving user preferences to local storage.");
       await AsyncStorage.setItem(
         STORAGE_KEYS.PREFERENCES,
-        JSON.stringify(preferences)
+        JSON.stringify(prefs),
       );
-    } catch (error) {
-      console.error('Error saving user preferences:', error);
-      throw error;
+    } catch (error: any) {
+      if (error instanceof AppErrorClass) {
+        throw error;
+      }
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      console.error(`Error saving user preferences: ${errorMessage}`, error);
+      throw ErrorHandler.processError(
+        new AppErrorClass(
+          ErrorType.Storage,
+          "Error saving user preferences",
+          error,
+        ),
+        "saveUserPreferences - main",
+      );
     }
   }
 
-  /**
-   * Get user preferences from persistent storage
-   * @returns A promise that resolves to the user preferences or null if not found
-   */
-  async getUserPreferences(): Promise<UserPreferences | null> {
+  async addToCourseHistory(courseTitleOrId: string): Promise<void> {
     try {
-      const prefsString = await AsyncStorage.getItem(STORAGE_KEYS.PREFERENCES);
-      if (!prefsString) {
-        return this.defaultPreferences;
+      const currentPrefs = await this.getUserPreferences();
+      const courseHistory = currentPrefs.courseHistory || []; // Provide default empty array
+      if (!courseHistory.includes(courseTitleOrId)) {
+        const newCourseHistory = [...courseHistory, courseTitleOrId].slice(-10);
+        const updatedPrefs: UserPreferences = {
+          ...currentPrefs,
+          courseHistory: newCourseHistory,
+        };
+        await this.saveUserPreferences(updatedPrefs);
+        console.log(`Added \"${courseTitleOrId}\" to course history.`);
       }
-      
-      return JSON.parse(prefsString) as UserPreferences;
     } catch (error) {
-      console.error('Error retrieving user preferences:', error);
-      return this.defaultPreferences;
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      console.error(`Error adding to course history: ${errorMessage}`, error);
+      ErrorHandler.processError(error, "addToCourseHistory");
     }
   }
 
-  /**
-   * Add a course topic to the user's course history
-   * @param topic The course topic to add
-   */
-  private async addToCourseHistory(topic: string): Promise<void> {
-    try {
-      const prefs = await this.getUserPreferences();
-      if (!prefs) {
-        return;
-      }
-      
-      // Add to course history if not already present
-      if (!prefs.courseHistory.includes(topic)) {
-        prefs.courseHistory.push(topic);
-        
-        // Keep only the most recent 10 courses
-        if (prefs.courseHistory.length > 10) {
-          prefs.courseHistory = prefs.courseHistory.slice(-10);
-        }
-        
-        await this.saveUserPreferences(prefs);
-      }
-    } catch (error) {
-      console.error('Error updating course history:', error);
-    }
-  }
-
-  /**
-   * Add a learning interest to the user's interests
-   * @param interest The interest to add
-   */
   async addLearningInterest(interest: string): Promise<void> {
     try {
-      const prefs = await this.getUserPreferences();
-      if (!prefs) {
-        return;
-      }
-      
-      // Add to interests if not already present
-      if (!prefs.learningInterests.includes(interest)) {
-        prefs.learningInterests.push(interest);
-        await this.saveUserPreferences(prefs);
+      const currentPrefs = await this.getUserPreferences();
+      const learningInterests = currentPrefs.learningInterests || []; // Provide default empty array
+      if (!learningInterests.includes(interest)) {
+        const newLearningInterests = [...learningInterests, interest];
+        const updatedPrefs: UserPreferences = {
+          ...currentPrefs,
+          learningInterests: newLearningInterests,
+        };
+        await this.saveUserPreferences(updatedPrefs);
+        console.log(`Added \"${interest}\" to learning interests.`);
       }
     } catch (error) {
-      console.error('Error updating learning interests:', error);
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      console.error(`Error adding learning interest: ${errorMessage}`, error);
+      ErrorHandler.processError(error, "addLearningInterest");
     }
   }
 
-  /**
-   * Remove a learning interest from the user's interests
-   * @param interest The interest to remove
-   */
   async removeLearningInterest(interest: string): Promise<void> {
     try {
-      const prefs = await this.getUserPreferences();
-      if (!prefs) {
-        return;
+      const currentPrefs = await this.getUserPreferences();
+      const learningInterests = currentPrefs.learningInterests || []; // Provide default empty array
+      const newLearningInterests = learningInterests.filter(
+        (i) => i !== interest,
+      );
+      if (newLearningInterests.length !== learningInterests.length) {
+        const updatedPrefs: UserPreferences = {
+          ...currentPrefs,
+          learningInterests: newLearningInterests,
+        };
+        await this.saveUserPreferences(updatedPrefs);
+        console.log(`Removed \"${interest}\" from learning interests.`);
       }
-      
-      // Remove from interests
-      prefs.learningInterests = prefs.learningInterests.filter(i => i !== interest);
-      await this.saveUserPreferences(prefs);
     } catch (error) {
-      console.error('Error removing learning interest:', error);
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      console.error(`Error removing learning interest: ${errorMessage}`, error);
+      ErrorHandler.processError(error, "removeLearningInterest");
     }
   }
 
-  // Helper methods for mocking API responses
+  private mockCourseGeneration(topic: string): Course {
+    console.log(`Mock generating course for: ${topic}`);
+    return {
+      id: `mock_course_${Date.now()}`,
+      title: `Mock Course: Introduction to ${topic}`,
+      description: `This is a mock course designed to introduce basic concepts of ${topic}.`,
+      modules: [
+        {
+          id: "m1",
+          title: "Module 1: Basics",
+          description: "Fundamental concepts",
+          duration: "1 hour",
+          resources: ["Resource A", "Resource B"],
+          completed: false,
+        },
+        {
+          id: "m2",
+          title: "Module 2: Core Principles",
+          description: "Understanding core ideas",
+          duration: "1.5 hours",
+          resources: ["Resource C"],
+          completed: false,
+        },
+        {
+          id: "m3",
+          title: "Module 3: Advanced Topics (Mock)",
+          description: "Exploring further",
+          duration: "2 hours",
+          resources: [],
+          completed: false,
+        },
+      ],
+      level: "beginner",
+      duration: "4.5 hours",
+      progress: 0,
+    };
+  }
 
-  private async simulateNetworkDelay(ms: number = 1000): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
+  private async mockTranscribeSpeech(audioUri?: string): Promise<string> {
+    console.log(`Mock STT called. Audio URI: ${audioUri || "not provided"}`);
+    await this.simulateNetworkDelay(1000);
+    if (audioUri) {
+      return "This is a mock transcription of your recorded audio.";
+    }
+    return "Hello, this is a mock recognized speech.";
+  }
+
+  private mockSpeakText(text: string, voiceOptions?: any): void {
+    console.log(`Mock TTS: Speaking \"${text}\" with options:`, voiceOptions);
+  }
+
+  private async simulateNetworkDelay(ms = 1000): Promise<void> {
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
   private mockResponseGeneration(message: string): string {
-    const lowercaseMessage = message.toLowerCase();
-    
-    if (lowercaseMessage.includes('hello') || lowercaseMessage.includes('hi')) {
-      return "Hello! I'm Lyo, your learning assistant. How can I help you today?";
-    } else if (lowercaseMessage.includes('course') || lowercaseMessage.includes('learn')) {
-      return "I'd be happy to help you create a personalized learning course! What topic are you interested in?";
-    } else if (lowercaseMessage.includes('help')) {
-      return "I'm here to help with your learning journey. I can suggest courses, create personalized learning paths, or answer questions about any subject. What would you like to focus on?";
-    } else if (lowercaseMessage.includes('thank')) {
-      return "You're welcome! Is there anything else I can help you with?";
-    } else if (lowercaseMessage.includes('physics') || lowercaseMessage.includes('science')) {
-      return "Physics is fascinating! Would you like me to create a customized physics course for you? I can focus on mechanics, quantum physics, relativity, or a general overview.";
-    } else {
-      return "That's interesting! Would you like me to create a learning pathway related to that topic?";
+    const lowerMessage = message.toLowerCase();
+    if (lowerMessage.includes("hello") || lowerMessage.includes("hi")) {
+      return "Hello there! How can I help you learn today? (Mock)";
+    } else if (lowerMessage.includes("course on javascript")) {
+      return "Sure, I can help you find a course on JavaScript. Are you looking for beginner, intermediate, or advanced level? (Mock)";
+    } else if (lowerMessage.includes("recommend something")) {
+      return "I recommend exploring topics like 'Quantum Computing Basics' or 'The History of Ancient Rome'. (Mock)";
     }
+    return "I'm not sure how to respond to that yet, but I'm learning! (Mock)";
   }
 }
 
