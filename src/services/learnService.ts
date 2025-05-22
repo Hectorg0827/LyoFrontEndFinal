@@ -1,4 +1,4 @@
-import { api } from './api';
+import { api } from "./api";
 
 export interface Course {
   id: string;
@@ -14,7 +14,7 @@ export interface Course {
     avatar: string;
   };
   tags: string[];
-  level: 'beginner' | 'intermediate' | 'advanced';
+  level: "beginner" | "intermediate" | "advanced";
 }
 
 export interface Lesson {
@@ -44,31 +44,35 @@ export const learnService = {
     level?: string;
     query?: string;
   }): Promise<Course[]> {
-    return api.get<Course[]>('/courses', filters);
+    return api.get<Course[]>("/courses", filters);
   },
-  
+
   // Get course details with lessons
-  async getCourseDetails(courseId: string): Promise<{course: Course, lessons: Lesson[]}> {
-    return api.get<{course: Course, lessons: Lesson[]}>(`/courses/${courseId}`);
+  async getCourseDetails(
+    courseId: string,
+  ): Promise<{ course: Course; lessons: Lesson[] }> {
+    return api.get<{ course: Course; lessons: Lesson[] }>(
+      `/courses/${courseId}`,
+    );
   },
-  
+
   // Get user's enrolled courses
   async getEnrolledCourses(): Promise<Course[]> {
-    return api.get<Course[]>('/user/courses');
+    return api.get<Course[]>("/user/courses");
   },
-  
+
   // Enroll in a course
   async enrollCourse(courseId: string): Promise<void> {
     return api.post(`/courses/${courseId}/enroll`);
   },
-  
+
   // Mark a lesson as completed
   async completeLesson(courseId: string, lessonId: string): Promise<void> {
     return api.post(`/courses/${courseId}/lessons/${lessonId}/complete`);
   },
-  
+
   // Get learning tools
   async getLearningTools(): Promise<LearningTool[]> {
-    return api.get<LearningTool[]>('/learning-tools');
-  }
+    return api.get<LearningTool[]>("/learning-tools");
+  },
 };
