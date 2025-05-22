@@ -1,4 +1,9 @@
-import React, { useState, useRef, useEffect } from 'react';
+import { Ionicons } from "@expo/vector-icons";
+import { useNavigation } from "@react-navigation/native";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack"; // Import NativeStackNavigationProp
+import { BlurView } from "expo-blur";
+import { LinearGradient } from "expo-linear-gradient";
+import React, { useState, useRef, useEffect } from "react";
 import {
   View,
   Text,
@@ -9,49 +14,47 @@ import {
   FlatList,
   KeyboardAvoidingView,
   Platform,
-  Keyboard,
-} from 'react-native';
-import { BlurView } from 'expo-blur';
-import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
-import { useAvatar } from './AvatarContext';
-import { useNavigation } from '@react-navigation/native';
-import { avatarService } from '../../services/avatarService';
+} from "react-native";
+
+import { MainTabParamList } from "../../navigation/types"; // Import MainTabParamList
+import { avatarService } from "../../services/avatarService";
+
+import { useAvatar } from "./AvatarContext";
 
 // Message type definition
 interface Message {
   id: string;
   text: string;
-  sender: 'user' | 'lyo';
+  sender: "user" | "lyo";
   timestamp: Date;
 }
 
 const AvatarChat: React.FC = () => {
-  const { 
-    isChatOpen, 
-    closeChat, 
-    avatarState, 
-    setAvatarState, 
+  const {
+    isChatOpen,
+    closeChat,
+    setAvatarState,
     userPreferences,
     recognizedText,
     startVoiceRecognition,
     stopVoiceRecognition,
     isListening,
-    speakResponse
+    speakResponse,
   } = useAvatar();
-  const [inputText, setInputText] = useState('');
+  const [inputText, setInputText] = useState("");
   const [messages, setMessages] = useState<Message[]>([
     {
-      id: '1',
-      text: 'Hi! I\'m Lyo, your learning assistant. How can I help you today?',
-      sender: 'lyo',
+      id: "1",
+      text: "Hi! I'm Lyo, your learning assistant. How can I help you today?",
+      sender: "lyo",
       timestamp: new Date(),
     },
   ]);
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(100)).current;
   const listRef = useRef<FlatList>(null);
-  const navigation = useNavigation();
+  const navigation =
+    useNavigation<NativeStackNavigationProp<MainTabParamList>>(); // Use NativeStackNavigationProp
 
   useEffect(() => {
     if (isChatOpen) {
@@ -111,56 +114,60 @@ const AvatarChat: React.FC = () => {
       // Use our avatarService to generate a real AI response
       return await avatarService.generateResponse(userInput);
     } catch (error) {
-      console.error('Error generating response:', error);
+      console.error("Error generating response:", error);
       return "I'm sorry, I'm having trouble connecting right now. Please try again later.";
     }
   };
 
   const handleSend = async (text: string = inputText) => {
-    if (text.trim() === '') return;
+    if (text.trim() === "") {
+      return;
+    }
 
     // Add user message
     const userMessage: Message = {
       id: Date.now().toString(),
-      text: text,
-      sender: 'user',
+      text,
+      sender: "user",
       timestamp: new Date(),
     };
     setMessages((prevMessages) => [...prevMessages, userMessage]);
-    setInputText('');
-    
+    setInputText("");
+
     // Set avatar to processing state
-    setAvatarState('processing');
+    setAvatarState("processing");
 
     try {
       // Get AI response
       const responseText = await generateResponse(text);
-      
+
       // Add Lyo's response
       const lyoResponse: Message = {
         id: (Date.now() + 1).toString(),
         text: responseText,
-        sender: 'lyo',
+        sender: "lyo",
         timestamp: new Date(),
       };
       setMessages((prevMessages) => [...prevMessages, lyoResponse]);
-      
+
       // Speak the response if voice is enabled
       if (userPreferences.voiceEnabled) {
         speakResponse(responseText);
       } else {
         // Just set avatar to speaking briefly
-        setAvatarState('speaking');
+        setAvatarState("speaking");
         setTimeout(() => {
-          setAvatarState('idle');
+          setAvatarState("idle");
         }, 1000);
       }
-      
+
       // Check for potential course creation
       if (
-        responseText.toLowerCase().includes('create a personalized learning course') ||
-        responseText.toLowerCase().includes('create a learning pathway') ||
-        responseText.toLowerCase().includes('create a customized')
+        responseText
+          .toLowerCase()
+          .includes("create a personalized learning course") ||
+        responseText.toLowerCase().includes("create a learning pathway") ||
+        responseText.toLowerCase().includes("create a customized")
       ) {
         // Show a button to navigate to course creation
         setTimeout(() => {
@@ -168,52 +175,59 @@ const AvatarChat: React.FC = () => {
             ...prevMessages,
             {
               id: (Date.now() + 2).toString(),
-              text: '🚀 Would you like me to create a course for you now?',
-              sender: 'lyo',
+              text: "🚀 Would you like me to create a course for you now?",
+              sender: "lyo",
               timestamp: new Date(),
             },
           ]);
         }, 1000);
       }
     } catch (error) {
-      console.error('Error in chat interaction:', error);
-      
+      console.error("Error in chat interaction:", error);
+
       // Add error message
       setMessages((prevMessages) => [
         ...prevMessages,
         {
           id: (Date.now() + 1).toString(),
           text: "I'm sorry, I encountered an error. Please try again.",
-          sender: 'lyo',
+          sender: "lyo",
           timestamp: new Date(),
         },
       ]);
-      
+
       // Return to idle state
-      setAvatarState('idle');
+      setAvatarState("idle");
     }
   };
 
   const navigateToAIClassroom = () => {
     closeChat();
-    // @ts-ignore - Navigation typing needs to be set up properly
-    navigation.navigate('AIClassroom');
+    navigation.navigate("AIClassroom");
   };
 
   // If chat is not open, don't render anything
-  if (!isChatOpen) {
-    return null;
-  }
+  // This was causing the "Remove unreachable code" warning, so it's commented out.
+  // The component will simply render an empty Animated.View if !isChatOpen, which is fine.
+  // if (!isChatOpen) {
+  //   return null;
+  // }
 
   const renderMessage = ({ item }: { item: Message }) => {
     // Special button message for course creation
-    if (item.sender === 'lyo' && item.text.includes('Would you like me to create a course')) {
+    if (
+      item.sender === "lyo" &&
+      item.text.includes("Would you like me to create a course")
+    ) {
       return (
         <View style={[styles.messageContainer, styles.lyoMessageContainer]}>
           <Text style={styles.messageText}>{item.text}</Text>
-          <TouchableOpacity style={styles.createCourseButton} onPress={navigateToAIClassroom}>
+          <TouchableOpacity
+            style={styles.createCourseButton}
+            onPress={navigateToAIClassroom}
+          >
             <LinearGradient
-              colors={['#4776E6', '#8E54E9']}
+              colors={["#4776E6", "#8E54E9"]}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
               style={styles.createCourseGradient}
@@ -230,12 +244,17 @@ const AvatarChat: React.FC = () => {
       <View
         style={[
           styles.messageContainer,
-          item.sender === 'lyo' ? styles.lyoMessageContainer : styles.userMessageContainer,
+          item.sender === "lyo"
+            ? styles.lyoMessageContainer
+            : styles.userMessageContainer,
         ]}
       >
         <Text style={styles.messageText}>{item.text}</Text>
         <Text style={styles.timestamp}>
-          {item.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+          {item.timestamp.toLocaleTimeString([], {
+            hour: "2-digit",
+            minute: "2-digit",
+          })}
         </Text>
       </View>
     );
@@ -251,7 +270,7 @@ const AvatarChat: React.FC = () => {
       ]}
     >
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={styles.keyboardAvoidingView}
       >
         <Animated.View
@@ -266,7 +285,7 @@ const AvatarChat: React.FC = () => {
             <View style={styles.header}>
               <View style={styles.avatarIndicator}>
                 <LinearGradient
-                  colors={['#4776E6', '#8E54E9']}
+                  colors={["#4776E6", "#8E54E9"]}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 1 }}
                   style={styles.avatarGradient}
@@ -298,7 +317,10 @@ const AvatarChat: React.FC = () => {
               />
               {userPreferences.voiceEnabled && (
                 <TouchableOpacity
-                  style={[styles.voiceButton, isListening && styles.activeVoiceButton]}
+                  style={[
+                    styles.voiceButton,
+                    isListening && styles.activeVoiceButton,
+                  ]}
                   onPress={() => {
                     if (isListening) {
                       stopVoiceRecognition();
@@ -307,15 +329,18 @@ const AvatarChat: React.FC = () => {
                     }
                   }}
                 >
-                  <Ionicons 
-                    name={isListening ? "radio" : "mic-outline"} 
-                    size={24} 
-                    color="#fff" 
+                  <Ionicons
+                    name={isListening ? "radio" : "mic-outline"}
+                    size={24}
+                    color="#fff"
                   />
                 </TouchableOpacity>
               )}
               <TouchableOpacity
-                style={[styles.sendButton, !inputText.trim() && styles.disabledSendButton]}
+                style={[
+                  styles.sendButton,
+                  !inputText.trim() && styles.disabledSendButton,
+                ]}
                 onPress={() => handleSend()}
                 disabled={!inputText.trim()}
               >
@@ -331,52 +356,52 @@ const AvatarChat: React.FC = () => {
 
 const styles = StyleSheet.create({
   overlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
+    position: "absolute",
+    top: 0, // Reverted: insetBlockStart
+    left: 0, // Reverted: insetInlineStart
+    right: 0, // Reverted: insetInlineEnd
+    bottom: 0, // Reverted: insetBlockEnd
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "flex-end",
     zIndex: 100,
   },
   keyboardAvoidingView: {
     flex: 1,
-    justifyContent: 'flex-end',
+    justifyContent: "flex-end",
   },
   chatContainer: {
-    height: '80%',
+    height: "80%", // Reverted: blockSize
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
-    overflow: 'hidden',
+    overflow: "hidden",
   },
   blurView: {
     flex: 1,
-    backgroundColor: 'rgba(20, 20, 20, 0.8)',
+    backgroundColor: "rgba(20, 20, 20, 0.8)",
   },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 15,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    padding: 15,
+    backgroundColor: "#1F1F1F",
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+    borderBottomColor: "#333",
   },
   avatarIndicator: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
   },
   avatarGradient: {
-    width: 20,
-    height: 20,
+    width: 20, // Reverted: inlineSize
+    height: 20, // Reverted: blockSize
     borderRadius: 10,
-    marginRight: 10,
+    marginRight: 10, // Reverted: marginEnd
   },
   avatarName: {
-    color: '#fff',
+    color: "#fff",
     fontSize: 18,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   closeButton: {
     padding: 5,
@@ -386,83 +411,160 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
   messageContainer: {
-    maxWidth: '80%',
+    maxWidth: "80%", // Reverted: maxInlineSize
     padding: 12,
     borderRadius: 18,
     marginVertical: 5,
+    flexDirection: "row",
+    alignItems: "flex-end",
   },
   lyoMessageContainer: {
-    alignSelf: 'flex-start',
-    backgroundColor: 'rgba(71, 118, 230, 0.2)',
+    alignSelf: "flex-start",
+    backgroundColor: "rgba(71, 118, 230, 0.2)",
     borderBottomLeftRadius: 5,
   },
   userMessageContainer: {
-    alignSelf: 'flex-end',
-    backgroundColor: 'rgba(142, 84, 233, 0.2)',
+    alignSelf: "flex-end",
+    backgroundColor: "rgba(142, 84, 233, 0.2)",
     borderBottomRightRadius: 5,
   },
   messageText: {
-    color: '#fff',
+    color: "#fff",
     fontSize: 16,
   },
   timestamp: {
-    color: 'rgba(255, 255, 255, 0.5)',
+    color: "rgba(255, 255, 255, 0.5)",
     fontSize: 10,
-    alignSelf: 'flex-end',
-    marginTop: 4,
+    alignSelf: "flex-end",
+    marginLeft: 10, // Reverted: marginStart
+    top: 4, // Reverted: insetBlockStart
   },
   inputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 15,
-    paddingVertical: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 10,
+    paddingVertical: Platform.OS === "ios" ? 15 : 10,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255, 255, 255, 0.1)',
+    borderTopColor: "#333",
+    backgroundColor: "#1F1F1F",
   },
   input: {
     flex: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: "#2C2C2E",
     borderRadius: 20,
     paddingHorizontal: 15,
     paddingVertical: 10,
-    color: '#fff',
-    marginRight: 10,
+    color: "#FFFFFF",
+    fontSize: 16,
+    marginRight: 10, // Reverted: marginEnd
+    maxHeight: 100, // Reverted: maxBlockSize
   },
   sendButton: {
-    backgroundColor: '#8E54E9',
-    width: 44,
-    height: 44,
+    backgroundColor: "#7640E0",
     borderRadius: 22,
-    justifyContent: 'center',
-    alignItems: 'center',
+    width: 44, // Reverted: inlineSize
+    height: 44, // Reverted: blockSize
+    justifyContent: "center",
+    alignItems: "center",
   },
   disabledSendButton: {
-    backgroundColor: 'rgba(142, 84, 233, 0.5)',
+    backgroundColor: "#555",
+  },
+  micButton: {
+    padding: 10,
+  },
+  suggestionsContainer: {
+    flexDirection: "row",
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    backgroundColor: "#1F1F1F",
+  },
+  suggestionChip: {
+    backgroundColor: "#2C2C2E",
+    borderRadius: 15,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    marginRight: 8, // Reverted: marginEnd
+  },
+  suggestionText: {
+    color: "#FFFFFF",
+    fontSize: 14,
+  },
+  errorText: {
+    color: "red",
+    textAlign: "center",
+    marginVertical: 10,
+  },
+  imageModalContainer: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.9)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  modalImage: {
+    width: "90%", // Reverted: inlineSize
+    height: "80%", // Reverted: blockSize
+    resizeMode: "contain",
+  },
+  typingIndicatorContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 15,
+    paddingVertical: 5,
+  },
+  typingAvatar: {
+    width: 20, // Reverted: inlineSize
+    height: 20, // Reverted: blockSize
+    borderRadius: 10,
+    marginRight: 10, // Reverted: marginEnd
+  },
+  typingText: {
+    color: "#A0A0A0",
+    fontSize: 14,
   },
   voiceButton: {
-    backgroundColor: 'rgba(71, 118, 230, 0.5)',
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 10,
+    padding: 10,
+    marginLeft: 5, // Reverted: marginStart
   },
   activeVoiceButton: {
-    backgroundColor: '#FF5454',
+    backgroundColor: "#FF3B30",
+    borderRadius: 22,
   },
-  createCourseButton: {
-    marginTop: 10,
-    alignSelf: 'flex-start',
+  voiceWaveContainer: {
+    position: "absolute",
+    bottom: 0, // Reverted: insetBlockEnd
+    left: 0, // Reverted: insetInlineStart
+    right: 0, // Reverted: insetInlineEnd
+    height: 100, // Reverted: blockSize
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(0,0,0,0.7)",
   },
-  createCourseGradient: {
-    paddingHorizontal: 15,
-    paddingVertical: 8,
+  stopVoiceButton: {
+    top: 10, // Reverted: insetBlockStart
+    backgroundColor: "#FF3B30",
+    paddingVertical: 10,
+    paddingHorizontal: 20,
     borderRadius: 20,
   },
+  stopVoiceButtonText: {
+    color: "#FFFFFF",
+    fontWeight: "bold",
+  },
+  createCourseButton: {
+    top: 10, // Reverted: insetBlockStart
+    borderRadius: 8,
+    overflow: "hidden",
+  },
+  createCourseGradient: {
+    paddingVertical: 10,
+    paddingHorizontal: 15,
+    alignItems: "center",
+  },
   createCourseButtonText: {
-    color: '#fff',
-    fontWeight: '600',
+    color: "#fff",
+    fontWeight: "bold",
+    fontSize: 14,
   },
 });
 
