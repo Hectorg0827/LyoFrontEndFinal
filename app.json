@@ -3,6 +3,7 @@
     "name": "Lyo - AI Learning Assistant",
     "slug": "lyo-app",
     "version": "1.0.0",
+    "sdkVersion": "51.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
@@ -16,8 +17,8 @@
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.lyo.app",
-      "deploymentTarget": "14.0",
+      "bundleIdentifier": "com.lyo.LyoAILearningAssistant",
+      "buildNumber": "1.0.0",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       }
