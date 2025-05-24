@@ -34,7 +34,7 @@ Pod::Spec.new do |s|
   s.license = package['license'] || 'MIT'
   s.author = package['author'] || 'Expo'
   s.homepage = package['homepage'] || 'https://docs.expo.dev'
-  s.platform = :ios, '15.0' # Hard-coded to 15.0
+  s.platform = :ios, '15.0' # Hard-coded to 15.0 for SDK 51
   s.swift_version = '5.4'
   s.source = { :git => 'https://github.com/expo/expo.git' }
   s.static_framework = true
