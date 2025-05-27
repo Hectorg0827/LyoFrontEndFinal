@@ -2,7 +2,7 @@
  * Validation utilities for user input
  */
 
-import { UserPreferences } from "./avatarService";
+import { UserPreferences } from "../types/avatar";
 
 export const validateUserPreferences = (
   preferences: Partial<UserPreferences>,

@@ -3,8 +3,6 @@
  * Used to standardize error handling across different services
  */
 
-import { AxiosError } from "axios";
-
 import { AppError as AppErrorClass, ErrorType } from "../utils/AppError";
 
 export class ErrorHandler {
@@ -179,8 +177,8 @@ export class ErrorHandler {
     let finalError: AppErrorClass;
     if (error instanceof AppErrorClass) {
       finalError = error;
-    } else if (error.isAxiosError) {
-      finalError = this.handleApiError(error as AxiosError);
+    } else if (error.isAxiosError || (error.response && error.config)) {
+      finalError = this.handleApiError(error);
     } else if (
       error.message &&
       (error.message.toLowerCase().includes("network") ||
@@ -238,6 +236,10 @@ export class ErrorHandler {
         return "There is a configuration error. Please contact support.";
       case ErrorType.VoiceRecognition:
         return "Error with voice recognition. Please try again.";
+      case ErrorType.VoiceSynthesis:
+        return "Error with voice synthesis. Please try again.";
+      case ErrorType.AiService:
+        return "Error with AI service. Please try again.";
       case ErrorType.Storage:
         return "Error with storage. Please check your storage and try again.";
       case ErrorType.Unknown:

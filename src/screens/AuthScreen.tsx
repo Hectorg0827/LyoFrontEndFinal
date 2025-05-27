@@ -17,8 +17,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { authService } from "../services/api";
-import { useAppStore } from "../store/appStore";
+import { useAuthStore } from "../store/authStore";
 
 // Define the sign in methods
 type SignInMethod = "email" | "google" | "apple" | "facebook";
@@ -29,90 +28,87 @@ const AuthScreen: React.FC = () => {
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [passwordVisible, setPasswordVisible] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const setUser = useAppStore((state) => state.setUser);
-  const setAuthenticated = useAppStore((state) => state.setAuthenticated);
+  
+  // Use auth store for authentication state
+  const { 
+    login, 
+    register, 
+    resetPassword,
+    isLoading, 
+    error, 
+    clearError, 
+    setError: setAuthError 
+  } = useAuthStore();
 
   // Handle authentication with different methods
   const handleAuth = async (method: SignInMethod) => {
-    if (error) setError(null);
-    setLoading(true);
-
+    if (error) clearError();
+    
     try {
       if (method === "email") {
         if (isLogin) {
           // Login with email and password
           if (!email || !password) {
-            throw new Error("Please enter both email and password");
+            setAuthError("Please enter both email and password");
+            return;
           }
 
-          const response = await authService.login({ email, password });
-          setUser({
-            id: response.user.id,
-            name: response.user.name,
-            avatar: response.user.avatar || "https://placekitten.com/300/300",
-          });
-          setAuthenticated(true);
+          await login(email, password);
+          // Navigation is handled by AppNavigator based on isAuthenticated state
         } else {
           // Register with email, name and password
           if (!name || !email || !password) {
-            throw new Error("Please fill in all fields");
+            setAuthError("Please fill in all fields");
+            return;
           }
 
           if (password.length < 8) {
-            throw new Error("Password must be at least 8 characters long");
+            setAuthError("Password must be at least 8 characters long");
+            return;
           }
 
-          const response = await authService.register({
-            name,
-            email,
-            password,
-          });
-          setUser({
-            id: response.user.id,
-            name: response.user.name,
-            avatar: response.user.avatar || "https://placekitten.com/300/300",
-          });
-          setAuthenticated(true);
+          await register(email, password, name);
+          // Navigation is handled by AppNavigator based on isAuthenticated state
         }
       } else {
-        // For demo purposes, mock social authentication
+        // For demo purposes, simulate social authentication
         // In a real app, integrate with Firebase Auth, Auth0, etc.
-        console.log(`Auth with ${method}`);
-
-        // Simulate successful social login
-        setUser({
-          id: "user456",
-          name:
-            method === "google"
-              ? "Google User"
-              : method === "apple"
-                ? "Apple User"
-                : "Facebook User",
-          avatar: "https://placekitten.com/300/300",
-        });
-        setAuthenticated(true);
+        setAuthError("Social login coming soon! Please use email login for now.");
+        
+        // TODO: Implement social login
+        // Example:
+        // if (method === "google") {
+        //   await loginWithGoogle();
+        // } else if (method === "apple") {
+        //   await loginWithApple();
+        // } else if (method === "facebook") {
+        //   await loginWithFacebook();
+        // }
       }
-
-      // Navigation is handled by AppNavigator based on isAuthenticated state
     } catch (err) {
       const message =
         err instanceof Error ? err.message : "Authentication failed";
-      setError(message);
-      console.error(message);
-    } finally {
-      setLoading(false);
+      setAuthError(message);
+      console.error("Auth error:", message);
     }
   };
 
   const toggleAuthMode = () => {
-    if (error) setError(null);
+    if (error) clearError();
     setIsLogin(!isLogin);
+    
+    // Clear form fields when switching modes
+    if (isLogin) {
+      // Switching to register mode, keep email if entered
+      setName("");
+      setPassword("");
+    } else {
+      // Switching to login mode, keep email if entered
+      setPassword("");
+    }
   };
 
-  const handleForgotPassword = () => {
+  const handleForgotPassword = async () => {
     if (!email) {
       Alert.alert(
         "Email Required",
@@ -120,19 +116,20 @@ const AuthScreen: React.FC = () => {
       );
       return;
     }
-
-    // For demo purposes
-    Alert.alert(
-      "Password Reset",
-      `A password reset link has been sent to ${email}`,
-    );
-
-    // In real implementation:
-    // authService.forgotPassword(email).then(() => {
-    //   Alert.alert('Password Reset', `A password reset link has been sent to ${email}`);
-    // }).catch(err => {
-    //   Alert.alert('Error', err.message);
-    // });
+    
+    try {
+      const success = await resetPassword(email);
+      
+      if (success) {
+        Alert.alert(
+          "Password Reset",
+          `A password reset link has been sent to ${email}. Please check your email.`
+        );
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to send reset link";
+      Alert.alert("Error", message);
+    }
   };
 
   return (
@@ -242,7 +239,7 @@ const AuthScreen: React.FC = () => {
             <TouchableOpacity
               style={styles.submitButton}
               onPress={() => handleAuth("email")}
-              disabled={loading}
+              disabled={isLoading}
             >
               <LinearGradient
                 colors={["#4776E6", "#8E54E9"]}
@@ -250,7 +247,7 @@ const AuthScreen: React.FC = () => {
                 end={{ x: 1, y: 0 }}
                 style={styles.gradient}
               >
-                {loading ? (
+                {isLoading ? (
                   <ActivityIndicator color="#fff" size="small" />
                 ) : (
                   <Text style={styles.submitButtonText}>
@@ -270,7 +267,7 @@ const AuthScreen: React.FC = () => {
               <TouchableOpacity
                 style={[styles.socialButton, styles.googleButton]}
                 onPress={() => handleAuth("google")}
-                disabled={loading}
+                disabled={isLoading}
               >
                 <Ionicons name="logo-google" size={20} color="#fff" />
               </TouchableOpacity>
@@ -278,7 +275,7 @@ const AuthScreen: React.FC = () => {
               <TouchableOpacity
                 style={[styles.socialButton, styles.appleButton]}
                 onPress={() => handleAuth("apple")}
-                disabled={loading}
+                disabled={isLoading}
               >
                 <Ionicons name="logo-apple" size={20} color="#fff" />
               </TouchableOpacity>
@@ -286,7 +283,7 @@ const AuthScreen: React.FC = () => {
               <TouchableOpacity
                 style={[styles.socialButton, styles.facebookButton]}
                 onPress={() => handleAuth("facebook")}
-                disabled={loading}
+                disabled={isLoading}
               >
                 <Ionicons name="logo-facebook" size={20} color="#fff" />
               </TouchableOpacity>

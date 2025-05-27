@@ -36,7 +36,8 @@
     "plugins": [
       "expo-notifications",
       "expo-localization",
-      "sentry-expo"
+      "sentry-expo",
+      "expo-asset"
     ],
     "updates": {
       "enabled": false

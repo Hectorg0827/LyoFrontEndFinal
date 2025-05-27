@@ -1,6 +1,5 @@
 import { AppError, ErrorType } from "../utils/AppError";
-
-import { api } from "./api";
+import apiService from "./apiService";
 
 export interface Story {
   id: string;
@@ -47,8 +46,7 @@ export const feedService = {
   async getFeed(cursor?: string | number): Promise<FeedResponse> {
     // Allow number for pageParam consistency
     try {
-      const params = cursor ? { cursor: String(cursor) } : {}; // Ensure cursor is string for API
-      return await api.get<FeedResponse>("/feed", params);
+      return await apiService.getFeed(cursor ? String(cursor) : undefined);
     } catch (error: any) {
       throw new AppError(ErrorType.Server, "Failed to get feed", error);
     }
@@ -56,11 +54,9 @@ export const feedService = {
 
   // Get stories for the story orbs
   async getStories(pageParam?: number): Promise<StoriesResponse> {
-    // Added optional pageParam
+    // Added optional pageParam for pagination if needed later
     try {
-      // If your stories API supports pagination, you would pass pageParam here
-      // For now, it's unused but makes the hook signature consistent
-      return await api.get<StoriesResponse>("/stories");
+      return await apiService.getStories();
     } catch (error: any) {
       throw new AppError(ErrorType.Server, "Failed to get stories", error);
     }
@@ -75,7 +71,7 @@ export const feedService = {
       );
     }
     try {
-      return await api.post(`/posts/${postId}/like`);
+      return await apiService.likePost(postId);
     } catch (error: any) {
       throw new AppError(
         ErrorType.Server,
@@ -94,7 +90,7 @@ export const feedService = {
       );
     }
     try {
-      return await api.delete(`/posts/${postId}/like`);
+      return await apiService.unlikePost(postId);
     } catch (error: any) {
       throw new AppError(
         ErrorType.Server,
@@ -113,7 +109,7 @@ export const feedService = {
       );
     }
     try {
-      return await api.post(`/posts/${postId}/save`);
+      return await apiService.savePost(postId);
     } catch (error: any) {
       throw new AppError(
         ErrorType.Server,
@@ -132,7 +128,7 @@ export const feedService = {
       );
     }
     try {
-      return await api.delete(`/posts/${postId}/save`);
+      return await apiService.unsavePost(postId);
     } catch (error: any) {
       throw new AppError(
         ErrorType.Server,
@@ -151,7 +147,7 @@ export const feedService = {
       );
     }
     try {
-      return await api.post(`/stories/${storyId}/view`);
+      return await apiService.markStoryViewed(storyId);
     } catch (error: any) {
       throw new AppError(
         ErrorType.Server,

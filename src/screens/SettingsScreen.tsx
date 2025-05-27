@@ -777,6 +777,68 @@ const SettingsScreen: React.FC = () => {
           </TouchableOpacity>
         </View>
 
+        {/* Debug Section - Development Only */}
+        {__DEV__ && (
+          <View style={styles.section}>
+            <Text
+              style={[
+                styles.sectionTitle,
+                isDarkMode ? styles.lightText : styles.darkText,
+              ]}
+            >
+              Debug
+            </Text>
+
+            <TouchableOpacity
+              style={styles.settingItem}
+              onPress={() => navigation.navigate("AvatarPerformanceDashboard")}
+            >
+              <Ionicons
+                name="bar-chart-outline"
+                size={22}
+                color={isDarkMode ? "#ccc" : "#555"}
+              />
+              <Text
+                style={[
+                  styles.settingText,
+                  isDarkMode ? styles.lightText : styles.darkText,
+                ]}
+              >
+                Avatar Performance Dashboard
+              </Text>
+              <Ionicons
+                name="chevron-forward"
+                size={22}
+                color={isDarkMode ? "#ccc" : "#555"}
+              />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.settingItem}
+              onPress={() => navigation.navigate("AvatarOptimizationTest")}
+            >
+              <Ionicons
+                name="flame-outline"
+                size={22}
+                color={isDarkMode ? "#ccc" : "#555"}
+              />
+              <Text
+                style={[
+                  styles.settingText,
+                  isDarkMode ? styles.lightText : styles.darkText,
+                ]}
+              >
+                Avatar Optimization Test
+              </Text>
+              <Ionicons
+                name="chevron-forward"
+                size={22}
+                color={isDarkMode ? "#ccc" : "#555"}
+              />
+            </TouchableOpacity>
+          </View>
+        )}
+
         {/* Logout Button */}
         <View style={styles.section}>
           <TouchableOpacity

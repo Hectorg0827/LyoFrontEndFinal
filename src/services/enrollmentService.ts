@@ -21,7 +21,7 @@ class EnrollmentService {
 
     if (!isAuthenticated) {
       throw ErrorHandler.createError(
-        ErrorType.AUTHENTICATION,
+        ErrorType.Auth,
         "You must be logged in to enroll in courses",
         { requiresLogin: true },
       );

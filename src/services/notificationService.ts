@@ -6,6 +6,7 @@ import * as Notifications from "expo-notifications";
 import { Platform } from "react-native";
 
 import { analyticsService, AnalyticsEvent } from "./analyticsService";
+import apiService from "./apiService";
 
 // Define notification categories
 export enum NotificationCategory {
@@ -375,6 +376,27 @@ class NotificationService {
       "@notification_preferences",
       JSON.stringify(this.preferences),
     );
+    
+    // Send to server if online
+    try {
+      const preferencesToSync = {
+        generalEnabled: this.preferences[NotificationCategory.GENERAL],
+        learningEnabled: this.preferences[NotificationCategory.LEARNING],
+        socialEnabled: this.preferences[NotificationCategory.SOCIAL],
+        reminderEnabled: this.preferences[NotificationCategory.REMINDER],
+        achievementEnabled: this.preferences[NotificationCategory.ACHIEVEMENT],
+        marketingEnabled: this.preferences[NotificationCategory.MARKETING],
+        pushEnabled: this.preferences.pushEnabled,
+        quietHoursEnabled: this.preferences.quietHoursEnabled,
+        quietHoursStart: this.preferences.scheduledQuietHoursStart,
+        quietHoursEnd: this.preferences.scheduledQuietHoursEnd,
+      };
+      
+      await apiService.updateNotificationPreferences(preferencesToSync);
+    } catch (error) {
+      console.error("Failed to sync notification preferences with server:", error);
+      // Continue anyway - we've saved locally
+    }
 
     return this.preferences;
   }
@@ -392,15 +414,7 @@ class NotificationService {
     }
 
     try {
-      // In a real app, send the token to your backend
-      // const response = await api.post('/users/push-token', {
-      //   userId,
-      //   token: this.expoPushToken,
-      //   device: Platform.OS,
-      // });
-
-      console.log("Push token registered for user:", userId);
-      return true;
+      return await apiService.registerPushToken(this.expoPushToken, Platform.OS);
     } catch (error) {
       console.error("Failed to register push token on server:", error);
       return false;

@@ -214,6 +214,20 @@ class PerformanceMonitoringService {
       });
     }
   }
+
+  // Record when app comes to foreground
+  recordAppForeground() {
+    analyticsService.logEvent("app_foreground", {
+      timestamp: Date.now(),
+    });
+  }
+
+  // Record when app goes to background
+  recordAppBackground() {
+    analyticsService.logEvent("app_background", {
+      timestamp: Date.now(),
+    });
+  }
 }
 
 export const performanceMonitoringService = new PerformanceMonitoringService();

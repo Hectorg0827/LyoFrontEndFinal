@@ -1,6 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { StatusBar } from "expo-status-bar";
-import React from "react";
+import React, { useMemo } from "react";
 import {
   View,
   Text,
@@ -8,112 +9,149 @@ import {
   FlatList,
   Image,
   TouchableOpacity,
+  ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-interface Notification {
-  id: string;
-  type: "follow" | "mention" | "like" | "comment" | "event" | "achievement";
-  content: string;
-  time: string;
-  user?: {
-    name: string;
-    avatar: string;
-  };
-  read: boolean;
-  link?: string;
-}
-
-const notifications: Notification[] = [
-  {
-    id: "1",
-    type: "follow",
-    content: "started following you",
-    time: "2h ago",
-    user: {
-      name: "Mark Brown",
-      avatar: "https://placekitten.com/100/100",
-    },
-    read: false,
-  },
-  {
-    id: "2",
-    type: "mention",
-    content: 'mentioned you in a comment: "Thanks @JaneDoe for your insights!"',
-    time: "3h ago",
-    user: {
-      name: "Sarah Williams",
-      avatar: "https://placekitten.com/101/101",
-    },
-    read: false,
-  },
-  {
-    id: "3",
-    type: "event",
-    content: 'Your upcoming event "AI Workshop" starts in 2 hours',
-    time: "5h ago",
-    read: true,
-  },
-  {
-    id: "4",
-    type: "like",
-    content: "liked your post about Data Science",
-    time: "1d ago",
-    user: {
-      name: "John Smith",
-      avatar: "https://placekitten.com/102/102",
-    },
-    read: true,
-  },
-  {
-    id: "5",
-    type: "achievement",
-    content: 'You\'ve earned the "7-Day Streak" badge! Keep it up!',
-    time: "2d ago",
-    read: true,
-  },
-  {
-    id: "6",
-    type: "comment",
-    content: 'commented on your post: "This is really insightful!"',
-    time: "3d ago",
-    user: {
-      name: "Emily Johnson",
-      avatar: "https://placekitten.com/103/103",
-    },
-    read: true,
-  },
-];
+import { userService, Notification } from "../services/userService";
 
 const NotificationsScreen: React.FC = () => {
   const [activeTab, setActiveTab] = React.useState("all");
+  const queryClient = useQueryClient();
 
-  const filteredNotifications = React.useMemo(() => {
+  // Query for fetching notifications
+  const { 
+    data: notifications, 
+    isLoading, 
+    isError, 
+    error 
+  } = useQuery({
+    queryKey: ['notifications'],
+    queryFn: () => userService.getNotifications(50, 0),
+  });
+
+  // Mutation for marking notifications as read
+  const markAsReadMutation = useMutation({
+    mutationFn: (notificationIds: string[]) => userService.markNotificationsRead(notificationIds),
+    onSuccess: () => {
+      // Invalidate the notifications query to refetch
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+    }
+  });
+
+  // Mutation for marking all notifications as read
+  const markAllAsReadMutation = useMutation({
+    mutationFn: () => userService.markAllNotificationsRead(),
+    onSuccess: () => {
+      // Invalidate the notifications query to refetch
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+    }
+  });
+
+  // Handle marking a notification as read
+  const handleMarkAsRead = (notificationId: string) => {
+    if (!markAsReadMutation.isPending) {
+      markAsReadMutation.mutate([notificationId]);
+    }
+  };
+
+  // Handle marking all notifications as read
+  const handleMarkAllAsRead = () => {
+    if (!markAllAsReadMutation.isPending) {
+      markAllAsReadMutation.mutate();
+    }
+  };
+
+  // Filter notifications based on active tab
+  const filteredNotifications = useMemo(() => {
+    if (!notifications) return [];
+    
     if (activeTab === "all") {
       return notifications;
     } else if (activeTab === "mentions") {
       return notifications.filter(
-        (notification) => notification.type === "mention",
+        (notification) => notification.type === "comment",
       );
     } else {
       return notifications.filter(
         (notification) => notification.type === "follow",
       );
     }
-  }, [activeTab]);
+  }, [activeTab, notifications]);
+
+  // Format relative time from ISO string
+  const formatRelativeTime = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    
+    const diffMinutes = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+    
+    if (diffMinutes < 60) {
+      return `${diffMinutes}m ago`;
+    } else if (diffHours < 24) {
+      return `${diffHours}h ago`;
+    } else {
+      return `${diffDays}d ago`;
+    }
+  };
+
+  // Generate AI summary based on notifications
+  const generateAISummary = () => {
+    if (!notifications || notifications.length === 0) {
+      return "You don't have any new notifications.";
+    }
+    
+    const unreadCount = notifications.filter(n => !n.read).length;
+    const followCount = notifications.filter(n => n.type === "follow" && !n.read).length;
+    const likeCount = notifications.filter(n => n.type === "like" && !n.read).length;
+    const commentCount = notifications.filter(n => n.type === "comment" && !n.read).length;
+    const eventCount = notifications.filter(n => n.type === "event" && !n.read).length;
+    
+    if (unreadCount === 0) {
+      return "You're all caught up! No new notifications.";
+    }
+    
+    let summary = `You have ${unreadCount} unread notification${unreadCount > 1 ? 's' : ''}: `;
+    const parts = [];
+    
+    if (followCount > 0) {
+      parts.push(`${followCount} new follower${followCount > 1 ? 's' : ''}`);
+    }
+    if (likeCount > 0) {
+      parts.push(`${likeCount} like${likeCount > 1 ? 's' : ''}`);
+    }
+    if (commentCount > 0) {
+      parts.push(`${commentCount} comment${commentCount > 1 ? 's' : ''}`);
+    }
+    if (eventCount > 0) {
+      parts.push(`${eventCount} event${eventCount > 1 ? 's' : ''}`);
+    }
+    
+    return summary + parts.join(", ") + ".";
+  };
 
   const renderNotificationItem = ({ item }: { item: Notification }) => {
+    // Get user data from the notification
+    const userData = item.data?.userId ? {
+      name: item.data?.userName || "User",
+      avatar: item.data?.userAvatar || "https://placekitten.com/100/100"
+    } : undefined;
+    
     return (
       <TouchableOpacity
         style={[
           styles.notificationItem,
           !item.read && styles.unreadNotification,
         ]}
+        onPress={() => handleMarkAsRead(item.id)}
       >
         <View style={styles.notificationIconContainer}>
-          {item.user ? (
+          {userData ? (
             <Image
-              source={{ uri: item.user.avatar }}
+              source={{ uri: userData.avatar }}
               style={styles.userAvatar}
             />
           ) : (
@@ -122,6 +160,7 @@ const NotificationsScreen: React.FC = () => {
                 styles.notificationIcon,
                 item.type === "event" && styles.eventIcon,
                 item.type === "achievement" && styles.achievementIcon,
+                item.type === "course" && styles.courseIcon,
               ]}
             >
               {item.type === "event" && (
@@ -130,23 +169,26 @@ const NotificationsScreen: React.FC = () => {
               {item.type === "achievement" && (
                 <Ionicons name="trophy" size={20} color="#fff" />
               )}
+              {item.type === "course" && (
+                <Ionicons name="book" size={20} color="#fff" />
+              )}
             </View>
           )}
         </View>
 
         <View style={styles.notificationContent}>
           <View style={styles.notificationHeader}>
-            {item.user && <Text style={styles.userName}>{item.user.name}</Text>}
+            {userData && <Text style={styles.userName}>{userData.name}</Text>}
             <Text
               style={[
                 styles.notificationText,
-                !item.user && styles.systemNotificationText,
+                !userData && styles.systemNotificationText,
               ]}
             >
-              {item.content}
+              {item.message}
             </Text>
           </View>
-          <Text style={styles.timeText}>{item.time}</Text>
+          <Text style={styles.timeText}>{formatRelativeTime(item.createdAt)}</Text>
         </View>
 
         {!item.read && <View style={styles.unreadDot} />}
@@ -162,12 +204,41 @@ const NotificationsScreen: React.FC = () => {
           <Text style={styles.aiSummaryTitle}>AI Summary</Text>
         </View>
         <Text style={styles.aiSummaryText}>
-          Today, you received 2 new followers, 1 mention, and have an upcoming
-          AI Workshop event in 2 hours.
+          {generateAISummary()}
         </Text>
       </View>
     );
   };
+
+  // Show loading state
+  if (isLoading) {
+    return (
+      <SafeAreaView style={[styles.container, styles.centerContent]}>
+        <StatusBar style="light" />
+        <ActivityIndicator size="large" color="#3498db" />
+        <Text style={styles.loadingText}>Loading notifications...</Text>
+      </SafeAreaView>
+    );
+  }
+
+  // Show error state
+  if (isError) {
+    return (
+      <SafeAreaView style={[styles.container, styles.centerContent]}>
+        <StatusBar style="light" />
+        <Ionicons name="alert-circle-outline" size={48} color="#e74c3c" />
+        <Text style={styles.errorText}>
+          Error loading notifications: {error instanceof Error ? error.message : "Unknown error"}
+        </Text>
+        <TouchableOpacity 
+          style={styles.retryButton}
+          onPress={() => queryClient.invalidateQueries({ queryKey: ['notifications'] })}
+        >
+          <Text style={styles.retryButtonText}>Retry</Text>
+        </TouchableOpacity>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -175,8 +246,16 @@ const NotificationsScreen: React.FC = () => {
 
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Notifications</Text>
-        <TouchableOpacity style={styles.headerButton}>
-          <Ionicons name="options-outline" size={24} color="#fff" />
+        <TouchableOpacity 
+          style={styles.headerButton}
+          onPress={handleMarkAllAsRead}
+          disabled={markAllAsReadMutation.isPending}
+        >
+          {markAllAsReadMutation.isPending ? (
+            <ActivityIndicator size="small" color="#fff" />
+          ) : (
+            <Ionicons name="checkmark-done-outline" size={24} color="#fff" />
+          )}
         </TouchableOpacity>
       </View>
 
@@ -229,6 +308,11 @@ const NotificationsScreen: React.FC = () => {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.notificationsList}
         ListHeaderComponent={renderAISummary}
+        ListEmptyComponent={
+          <Text style={styles.emptyText}>No notifications in this category</Text>
+        }
+        refreshing={isLoading}
+        onRefresh={() => queryClient.invalidateQueries({ queryKey: ['notifications'] })}
       />
     </SafeAreaView>
   );
@@ -238,6 +322,11 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#000",
+  },
+  centerContent: {
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
   },
   header: {
     flexDirection: "row",
@@ -336,6 +425,9 @@ const styles = StyleSheet.create({
   achievementIcon: {
     backgroundColor: "#f39c12",
   },
+  courseIcon: {
+    backgroundColor: "#2ecc71",
+  },
   notificationContent: {
     flex: 1,
     justifyContent: "center",
@@ -370,6 +462,35 @@ const styles = StyleSheet.create({
     height: 8,
     borderRadius: 4,
     backgroundColor: "#3498db",
+  },
+  loadingText: {
+    color: "#fff",
+    marginTop: 12,
+    fontSize: 16,
+  },
+  errorText: {
+    color: "#e74c3c",
+    marginTop: 12,
+    textAlign: "center",
+    fontSize: 16,
+    marginHorizontal: 20,
+  },
+  retryButton: {
+    marginTop: 20,
+    backgroundColor: "#3498db",
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 8,
+  },
+  retryButtonText: {
+    color: "#fff",
+    fontWeight: "600",
+  },
+  emptyText: {
+    color: "#999",
+    textAlign: "center",
+    marginTop: 40,
+    fontSize: 16,
   },
 });
 

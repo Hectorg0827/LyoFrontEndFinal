@@ -25,7 +25,10 @@ import SettingsScreen from "../screens/SettingsScreen";
 import PrivacyPolicyScreen from "../screens/PrivacyPolicyScreen";
 import TermsOfServiceScreen from "../screens/TermsOfServiceScreen";
 import NotificationPreferencesScreen from "../screens/NotificationPreferencesScreen";
+import AvatarPerformanceDashboard from "../components/Avatar/AvatarPerformanceDashboard";
+import AvatarOptimizationTest from "../components/Avatar/AvatarOptimizationTest";
 import { useAppStore } from "../store/appStore";
+import { useAuthStore } from "../store/authStore";
 
 import linking from "./linking";
 
@@ -108,10 +111,14 @@ const MainNavigator = () => {
 };
 
 const AppNavigator: React.FC = () => {
-  const isAuthenticated = useAppStore((state) => state.isAuthenticated);
+  // Get authentication state from the auth store
+  const { isAuthenticated, checkAuth } = useAuthStore();
+  
+  // Get app state from the app store
   const isOnboardingCompleted = useAppStore(
     (state) => state.isOnboardingCompleted,
   );
+  
   const [isAppReady, setIsAppReady] = useState(false);
 
   // Load app state on startup
@@ -130,6 +137,9 @@ const AppNavigator: React.FC = () => {
         if (onboardingCompleted === "true") {
           appStore.setOnboardingCompleted(true);
         }
+        
+        // Check if user is authenticated
+        await checkAuth();
 
         // Initialize analytics, notifications, and performance monitoring
         // In a real implementation, these would be calls to the respective services
@@ -145,7 +155,7 @@ const AppNavigator: React.FC = () => {
     }
 
     prepare();
-  }, []);
+  }, [checkAuth]);
 
   // Until the app is ready, return null (splash screen will be visible)
   if (!isAppReady) {
@@ -188,6 +198,16 @@ const AppNavigator: React.FC = () => {
             <Stack.Screen
               name="AccessibilitySettings"
               component={AccessibilitySettingsScreen}
+            />
+
+            {/* Avatar Optimization Screens - Development Only */}
+            <Stack.Screen
+              name="AvatarPerformanceDashboard"
+              component={AvatarPerformanceDashboard}
+            />
+            <Stack.Screen
+              name="AvatarOptimizationTest"
+              component={AvatarOptimizationTest}
             />
 
             {/* Legal Documents */}

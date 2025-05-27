@@ -1,6 +1,5 @@
 import { AppError, ErrorType } from "../utils/AppError";
-
-import { api } from "./api";
+import apiService from "./apiService";
 
 export interface UserProfile {
   id: string;
@@ -62,7 +61,7 @@ export const userService = {
   // Get current user profile
   async getCurrentProfile(): Promise<UserProfile> {
     try {
-      return await api.get<UserProfile>("/user/profile");
+      return await apiService.getUserProfile();
     } catch (error: any) {
       throw new AppError(
         ErrorType.Server,
@@ -78,7 +77,7 @@ export const userService = {
       throw new AppError(ErrorType.Validation, "User ID is required");
     }
     try {
-      return await api.get<UserProfile>(`/users/${userId}/profile`);
+      return await apiService.getUserProfileById(userId);
     } catch (error: any) {
       throw new AppError(
         ErrorType.Server,
@@ -99,7 +98,7 @@ export const userService = {
     }>,
   ): Promise<UserProfile> {
     try {
-      return await api.put<UserProfile>("/user/profile", data);
+      return await apiService.updateUserProfile(data);
     } catch (error: any) {
       throw new AppError(
         ErrorType.Server,
@@ -112,10 +111,7 @@ export const userService = {
   // Get user's notifications
   async getNotifications(limit = 20, offset = 0): Promise<Notification[]> {
     try {
-      return await api.get<Notification[]>("/user/notifications", {
-        limit,
-        offset,
-      });
+      return await apiService.getNotifications(limit, offset);
     } catch (error: any) {
       throw new AppError(
         ErrorType.Server,
@@ -131,11 +127,24 @@ export const userService = {
       throw new AppError(ErrorType.Validation, "Notification IDs are required");
     }
     try {
-      return await api.post("/user/notifications/read", { notificationIds });
+      return await apiService.markNotificationsRead(notificationIds);
     } catch (error: any) {
       throw new AppError(
         ErrorType.Server,
         "Failed to mark notifications as read",
+        error,
+      );
+    }
+  },
+  
+  // Mark all notifications as read
+  async markAllNotificationsRead(): Promise<void> {
+    try {
+      return await apiService.markAllNotificationsRead();
+    } catch (error: any) {
+      throw new AppError(
+        ErrorType.Server,
+        "Failed to mark all notifications as read",
         error,
       );
     }
@@ -148,11 +157,7 @@ export const userService = {
     offset = 0,
   ): Promise<BookshelfItem[]> {
     try {
-      return await api.get<BookshelfItem[]>("/user/bookshelf", {
-        type,
-        limit,
-        offset,
-      });
+      return await apiService.getBookshelfItems(type, limit, offset);
     } catch (error: any) {
       throw new AppError(
         ErrorType.Server,
@@ -171,7 +176,7 @@ export const userService = {
       );
     }
     try {
-      return await api.post(`/users/${userId}/follow`);
+      return await apiService.followUser(userId);
     } catch (error: any) {
       throw new AppError(
         ErrorType.Server,
@@ -190,7 +195,7 @@ export const userService = {
       );
     }
     try {
-      return await api.delete(`/users/${userId}/follow`);
+      return await apiService.unfollowUser(userId);
     } catch (error: any) {
       throw new AppError(
         ErrorType.Server,
@@ -203,7 +208,7 @@ export const userService = {
   // Get user's achievements
   async getAchievements(): Promise<Achievement[]> {
     try {
-      return await api.get<Achievement[]>("/user/achievements");
+      return await apiService.getAchievements();
     } catch (error: any) {
       throw new AppError(ErrorType.Server, "Failed to get achievements", error);
     }

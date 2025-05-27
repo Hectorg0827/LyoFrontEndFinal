@@ -1,5 +1,6 @@
 import { api } from "./api";
 import { ErrorHandler, ErrorType } from "./errorHandler";
+import { ApiUserPreferences } from "../types/avatar";
 
 // API endpoints for avatar-related operations
 const ENDPOINTS = {
@@ -67,30 +68,6 @@ export interface CourseModule {
   duration: string;
   resources: string[];
   completed: boolean;
-}
-
-// Define UserPreferences directly in this file
-export interface UserPreferences {
-  voiceEnabled?: boolean;
-  animationsEnabled?: boolean;
-  avatarColor?: string;
-  voiceRate?: number;
-  voicePitch?: number;
-  learningInterests?: string[];
-  courseHistory?: string[]; // Changed from Array<{ courseId: string; ... }> to string[]
-  accessibilityMode?: boolean;
-  subtitlesEnabled?: boolean;
-  avatarSize?: "small" | "medium" | "large";
-  avatarPersonality?: string; // Could be an enum if specific personalities are defined
-  autoHideAvatar?: boolean;
-  preferredLanguage?: string; // e.g., 'en-US', 'es-ES'
-  notificationSettings?: {
-    newCourseRecommendations?: boolean; // Renamed from newContent and aligned
-    studyReminders?: boolean;
-    communityUpdates?: boolean; // Added to align
-  };
-  theme?: "light" | "dark" | "system";
-  // Add any other preferences that are managed by the backend
 }
 
 // Define request parameters type for getRecommendations
@@ -267,10 +244,10 @@ class AvatarApiService {
    * @returns Promise with saved preferences
    */
   async saveUserPreferences(
-    preferences: UserPreferences,
-  ): Promise<UserPreferences> {
+    preferences: ApiUserPreferences,
+  ): Promise<ApiUserPreferences> {
     try {
-      return await api.put<UserPreferences>(
+      return await api.put<ApiUserPreferences>(
         ENDPOINTS.USER_PREFERENCES,
         preferences,
       );
@@ -287,9 +264,9 @@ class AvatarApiService {
    * Retrieve user preferences from the backend
    * @returns Promise with user preferences
    */
-  async getUserPreferences(): Promise<UserPreferences> {
+  async getUserPreferences(): Promise<ApiUserPreferences> {
     try {
-      return await api.get<UserPreferences>(ENDPOINTS.USER_PREFERENCES);
+      return await api.get<ApiUserPreferences>(ENDPOINTS.USER_PREFERENCES);
     } catch (error) {
       throw ErrorHandler.createError(
         ErrorType.Storage,

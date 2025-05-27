@@ -128,7 +128,7 @@ const AIClassroomScreen: React.FC = () => {
       console.error("Error fetching enrolled courses:", error);
 
       // Handle different error types
-      if (ErrorHandler.isErrorType(error, ErrorType.AUTHENTICATION)) {
+      if (ErrorHandler.isErrorType(error, ErrorType.Auth)) {
         // User needs to authenticate - we can show this silently or with a small notification
         setEnrolledCourses([]);
       } else if (ErrorHandler.isErrorType(error, ErrorType.NETWORK)) {
@@ -141,7 +141,7 @@ const AIClassroomScreen: React.FC = () => {
       } else {
         // General server or other error
         ErrorHandler.handleError({
-          type: ErrorType.SERVER,
+          type: ErrorType.Server,
           message: "Failed to load enrolled courses",
           error: error as Error,
         });
@@ -174,7 +174,7 @@ const AIClassroomScreen: React.FC = () => {
 
       // Handle errors gracefully
       ErrorHandler.handleError({
-        type: ErrorType.AI_SERVICE,
+        type: ErrorType.AiService,
         message: "Failed to generate course",
         error: error as Error,
         context: { topic, difficulty },
@@ -212,7 +212,7 @@ const AIClassroomScreen: React.FC = () => {
       console.error("Error enrolling in course:", error);
 
       // Check if it's an authentication error
-      if (ErrorHandler.isErrorType(error, ErrorType.AUTHENTICATION)) {
+      if (ErrorHandler.isErrorType(error, ErrorType.Auth)) {
         const authMessage =
           "You need to be logged in to enroll in courses. Would you like to sign in now?";
         await avatarService.speakResponse(authMessage);
@@ -231,7 +231,7 @@ const AIClassroomScreen: React.FC = () => {
       } else {
         // Handle other enrollment errors
         ErrorHandler.handleError({
-          type: ErrorType.SERVER,
+          type: ErrorType.Server,
           message: "Failed to enroll in course",
           error: error as Error,
         });
@@ -286,7 +286,7 @@ const AIClassroomScreen: React.FC = () => {
     } catch (error) {
       console.error("Error marking module as completed:", error);
 
-      if (ErrorHandler.isErrorType(error, ErrorType.AUTHENTICATION)) {
+      if (ErrorHandler.isErrorType(error, ErrorType.Auth)) {
         const authMessage =
           "You need to be logged in to track your progress. Would you like to sign in now?";
         await avatarService.speakResponse(authMessage);

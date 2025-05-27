@@ -30,6 +30,7 @@ interface AppState {
 
   // Actions
   setUser: (user: User | null) => void;
+  setAuthenticated: (status: boolean) => void;
   login: (userData: User) => void;
   logout: () => void;
   // setAuthenticated: (status: boolean) => void; // Covered by setUser and logout
@@ -69,6 +70,10 @@ export const useAppStore = create<AppState>()(
           currentLanguage:
             user?.preferences?.preferredLanguage || get().currentLanguage,
         });
+      },
+
+      setAuthenticated: (status) => {
+        set({ isAuthenticated: status });
       },
 
       login: (userData) => {

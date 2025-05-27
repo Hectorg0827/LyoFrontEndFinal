@@ -1,8 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { LinearGradient } from "expo-linear-gradient";
 import { StatusBar } from "expo-status-bar";
-import React from "react";
+import React, { useEffect } from "react";
 import {
   View,
   Text,
@@ -11,8 +11,11 @@ import {
   Image,
   TouchableOpacity,
   ActivityIndicator,
+  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useNavigation } from "@react-navigation/native";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 
 import { feedService, FeedPost } from "../services/feedService";
 import { learnService, Course } from "../services/learnService";
@@ -22,10 +25,29 @@ import {
   Achievement as UserAchievement,
   BookshelfItem,
 } from "../services/userService";
+import { useUserStore } from "../store/userStore";
+import { RootStackParamList } from "../navigation/types";
 
 const ProfileScreen: React.FC = () => {
   const [activeTab, setActiveTab] = React.useState("posts");
-
+  const queryClient = useQueryClient();
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  
+  // User store
+  const {
+    profile: storeProfile,
+    error: storeError,
+    isLoadingProfile: storeLoading,
+    fetchProfile,
+    updateProfile,
+  } = useUserStore();
+  
+  // Load profile from store on component mount
+  useEffect(() => {
+    fetchProfile();
+  }, [fetchProfile]);
+  
+  // Profile data query - using React Query as fallback and for integration with existing code
   const {
     data: profileData,
     isLoading: isLoadingProfile,
@@ -34,6 +56,34 @@ const ProfileScreen: React.FC = () => {
   } = useQuery<UserProfile, Error>({
     queryKey: ["currentUserProfile"],
     queryFn: userService.getCurrentProfile,
+    // If we already have the profile in the store, don't fetch it again
+    enabled: !storeProfile,
+  });
+  
+  // Use the profile from the store if available, otherwise use the one from React Query
+  const userProfile = storeProfile || profileData;
+  const isProfileLoading = storeLoading || isLoadingProfile;
+  const profileFetchError = storeError || (profileError as Error)?.message;
+  
+  // Update profile mutation
+  const updateProfileMutation = useMutation({
+    mutationFn: (data: Partial<{
+      name: string;
+      bio: string;
+      location: string;
+      website: string;
+      avatar: string;
+    }>) => {
+      // Use the store update function
+      return updateProfile(data as Partial<UserProfile>);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["currentUserProfile"] });
+      Alert.alert("Success", "Your profile has been updated successfully.");
+    },
+    onError: (error: any) => {
+      Alert.alert("Error", `Failed to update profile: ${error.message}`);
+    }
   });
 
   const {
@@ -96,21 +146,32 @@ const ProfileScreen: React.FC = () => {
     return enrolledCoursesData.filter((course) => course.progress === 100);
   }, [enrolledCoursesData]);
 
-  if (isLoadingProfile || isLoadingAchievements) {
+  if (isProfileLoading || isLoadingAchievements) {
     return (
       <SafeAreaView style={[styles.container, styles.centerContent]}>
         <ActivityIndicator size="large" color="#fff" />
+        <Text style={styles.loadingText}>Loading profile data...</Text>
       </SafeAreaView>
     );
   }
 
-  if (isErrorProfile || isErrorAchievements) {
+  if ((isErrorProfile && !userProfile) || isErrorAchievements) {
     return (
       <SafeAreaView style={[styles.container, styles.centerContent]}>
+        <Ionicons name="alert-circle-outline" size={64} color="#e74c3c" />
         <Text style={styles.errorText}>
           Failed to load profile data.{" "}
-          {profileError?.message || achievementsError?.message}
+          {profileFetchError || achievementsError?.message}
         </Text>
+        <TouchableOpacity 
+          style={styles.retryButton}
+          onPress={() => {
+            fetchProfile();
+            queryClient.invalidateQueries({ queryKey: ['userAchievements'] });
+          }}
+        >
+          <Text style={styles.retryButtonText}>Retry</Text>
+        </TouchableOpacity>
       </SafeAreaView>
     );
   }
@@ -146,25 +207,25 @@ const ProfileScreen: React.FC = () => {
     return renderItems();
   };
 
-  const userStatsToDisplay = profileData?.stats
+  const userStatsToDisplay = userProfile?.stats
     ? [
         {
           label: "Courses Completed",
-          value: profileData.stats.coursesCompleted,
+          value: userProfile.stats.coursesCompleted,
         },
         {
           label: "Lessons Completed",
-          value: profileData.stats.lessonsCompleted,
+          value: userProfile.stats.lessonsCompleted,
         },
-        { label: "Events Attended", value: profileData.stats.eventsAttended },
-        { label: "Posts Created", value: profileData.stats.postsCreated },
+        { label: "Events Attended", value: userProfile.stats.eventsAttended },
+        { label: "Posts Created", value: userProfile.stats.postsCreated },
         {
           label: "Current Streak",
-          value: `${profileData.stats.daysStreak} days`,
+          value: `${userProfile.stats.daysStreak} days`,
         },
         {
           label: "Minutes Learned",
-          value: `${Math.round((profileData.stats.minutesLearned || 0) / 60)}h`,
+          value: `${Math.round((userProfile.stats.minutesLearned || 0) / 60)}h`,
         },
       ]
     : [
@@ -173,9 +234,9 @@ const ProfileScreen: React.FC = () => {
         { label: "Current Streak", value: "0 days" },
       ]; // Fallback to default stats
 
-  const xpLevel = profileData?.stats?.xpLevel || 0;
-  const currentXp = profileData?.stats?.currentXp || 0;
-  const nextLevelXp = profileData?.stats?.nextLevelXp || 1000;
+  const xpLevel = userProfile?.stats?.xpLevel || 0;
+  const currentXp = userProfile?.stats?.currentXp || 0;
+  const nextLevelXp = userProfile?.stats?.nextLevelXp || 1000;
   const xpProgress = nextLevelXp > 0 ? (currentXp / nextLevelXp) * 100 : 0;
 
   return (
@@ -183,12 +244,22 @@ const ProfileScreen: React.FC = () => {
       <StatusBar style="light" />
 
       <View style={styles.header}>
-        <TouchableOpacity>
+        <TouchableOpacity
+          onPress={() => navigation.navigate('Settings')}
+        >
           <Ionicons name="settings-outline" size={24} color="#fff" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Profile</Text>
-        <TouchableOpacity>
-          <Ionicons name="share-social-outline" size={24} color="#fff" />
+        <TouchableOpacity
+          onPress={() => navigation.navigate('Notifications')}
+        >
+          <View style={styles.notificationIcon}>
+            <Ionicons name="notifications-outline" size={24} color="#fff" />
+            {/* Badge for unread notifications - could be connected to userStore's unreadNotificationCount */}
+            <View style={styles.notificationBadge}>
+              <Text style={styles.notificationBadgeText}>3</Text>
+            </View>
+          </View>
         </TouchableOpacity>
       </View>
 
@@ -197,7 +268,7 @@ const ProfileScreen: React.FC = () => {
           <View style={styles.profileImageContainer}>
             <Image
               source={{
-                uri: profileData?.avatar || "https://placekitten.com/300/300",
+                uri: userProfile?.avatar || "https://placekitten.com/300/300",
               }}
               style={styles.profileImage}
             />
@@ -212,10 +283,10 @@ const ProfileScreen: React.FC = () => {
           </View>
 
           <Text style={styles.userName}>
-            {profileData?.name || "User Name"}
+            {userProfile?.name || "User Name"}
           </Text>
           <Text style={styles.userBio}>
-            {profileData?.bio || "User bio not available."}
+            {userProfile?.bio || "User bio not available."}
           </Text>
 
           <View style={styles.statsContainer}>
@@ -228,10 +299,49 @@ const ProfileScreen: React.FC = () => {
           </View>
 
           <View style={styles.buttonsContainer}>
-            <TouchableOpacity style={styles.editButton}>
-              <Text style={styles.editButtonText}>Edit Profile</Text>
+            <TouchableOpacity 
+              style={[
+                styles.editButton, 
+                updateProfileMutation.isPending && styles.disabledButton
+              ]}
+              onPress={() => {
+                // In a real app, this would open a modal or navigate to an edit screen
+                // For this example, we'll use Alert to simulate editing
+                Alert.prompt(
+                  "Update Bio",
+                  "Enter your new bio",
+                  [
+                    {
+                      text: "Cancel",
+                      style: "cancel"
+                    },
+                    {
+                      text: "Save",
+                      onPress: (bio) => {
+                        if (bio) {
+                          updateProfileMutation.mutate({ bio });
+                        }
+                      }
+                    }
+                  ],
+                  "plain-text",
+                  userProfile?.bio || ""
+                );
+              }}
+              disabled={updateProfileMutation.isPending}
+            >
+              {updateProfileMutation.isPending ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <Text style={styles.editButtonText}>Edit Profile</Text>
+              )}
             </TouchableOpacity>
-            <TouchableOpacity style={styles.shareButton}>
+            <TouchableOpacity 
+              style={styles.shareButton}
+              onPress={() => {
+                Alert.alert("Share Profile", "Sharing functionality coming soon!");
+              }}
+            >
               <Ionicons name="share-outline" size={20} color="#fff" />
             </TouchableOpacity>
           </View>
@@ -457,10 +567,47 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   errorText: {
-    color: "red",
+    color: "#e74c3c",
     fontSize: 16,
     textAlign: "center",
-    paddingInline: 20,
+    paddingHorizontal: 20,
+    marginTop: 16,
+  },
+  loadingText: {
+    color: "#fff",
+    fontSize: 16,
+    marginTop: 16,
+  },
+  retryButton: {
+    marginTop: 20,
+    backgroundColor: "#3498db",
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 8,
+  },
+  retryButtonText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  notificationIcon: {
+    position: 'relative',
+  },
+  notificationBadge: {
+    position: 'absolute',
+    right: -6,
+    top: -6,
+    backgroundColor: '#e74c3c',
+    borderRadius: 10,
+    width: 20,
+    height: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  notificationBadgeText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: 'bold',
   },
   noItemsText: {
     color: "#999",
@@ -557,6 +704,13 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: 8,
     marginInlineEnd: 12,
+    minWidth: 120,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  disabledButton: {
+    backgroundColor: "#2c3e50",
+    opacity: 0.7,
   },
   editButtonText: {
     color: "#fff",

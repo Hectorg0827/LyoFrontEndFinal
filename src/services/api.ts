@@ -4,8 +4,7 @@ import { useAppStore } from "../store/appStore";
 import { ErrorHandler, ErrorType } from "./errorHandler";
 
 // API client configuration
-const API_URL = ENV.API_URL;
-const API_TIMEOUT = ENV.API_TIMEOUT;
+const { API_URL, API_TIMEOUT } = ENV;
 
 /**
  * API client for making requests to the Lyo backend
@@ -72,16 +71,16 @@ class ApiClient {
 
     throw ErrorHandler.createError(
       response.status === 401
-        ? ErrorType.AUTHENTICATION
+        ? ErrorType.Auth
         : response.status === 403
-          ? ErrorType.AUTHORIZATION
+          ? ErrorType.Permissions
           : response.status === 404
-            ? ErrorType.NOT_FOUND
+            ? ErrorType.NotFound
             : response.status === 429
-              ? ErrorType.RATE_LIMIT
+              ? ErrorType.RateLimit
               : response.status >= 500
-                ? ErrorType.SERVER
-                : ErrorType.NETWORK,
+                ? ErrorType.Server
+                : ErrorType.Network,
       errorData.message ||
         `API Error: ${response.status} ${response.statusText}`,
       { statusCode: response.status, data: errorData },
@@ -95,7 +94,7 @@ class ApiClient {
     timeoutId: number;
     promise: Promise<never>;
   } {
-    let timeoutId: number;
+    let timeoutId: number = 0; // Initialize timeoutId
     const promise = new Promise<never>((_, reject) => {
       timeoutId = setTimeout(() => {
         this.controller?.abort();

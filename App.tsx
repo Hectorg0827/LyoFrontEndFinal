@@ -9,6 +9,7 @@ import {
   AppStateStatus,
 } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { registerRootComponent } from "expo";
 
 import AvatarChat from "./src/components/Avatar/AvatarChat";
 import { AvatarProvider } from "./src/components/Avatar/AvatarContext";
@@ -18,6 +19,7 @@ import linking from "./src/navigation/linking";
 import { analyticsService } from "./src/services/analyticsService";
 import { initializeApi } from "./src/services/apiMiddleware";
 import { appPackagingService } from "./src/services/appPackagingService";
+import { initializeAvatarSystem } from "./src/services/avatarSystemInit";
 import { localizationService } from "./src/services/localizationService";
 import { notificationService } from "./src/services/notificationService";
 import { performanceMonitoringService } from "./src/services/performanceMonitoringService";
@@ -32,13 +34,13 @@ const queryClient = new QueryClient({
     queries: {
       retry: 2,
       staleTime: 1000 * 60 * 5, // 5 minutes
-      cacheTime: 1000 * 60 * 30, // 30 minutes
+      gcTime: 1000 * 60 * 30, // 30 minutes (replaces cacheTime)
       refetchOnWindowFocus: false,
     },
   },
 });
 
-export default function App() {
+function App() {
   const [isReady, setIsReady] = useState(false);
   const [appState, setAppState] = useState<AppStateStatus>(
     AppState.currentState,
@@ -56,7 +58,6 @@ export default function App() {
         performanceMonitoringService.recordAppStart();
 
         // Initialize localization
-        await localizationService.init();
 
         // Initialize notification service
         await notificationService.configure();
@@ -64,6 +65,14 @@ export default function App() {
 
         // Initialize API with stored auth token
         await initializeApi();
+
+        // Initialize Avatar System Optimizations
+        await initializeAvatarSystem({
+          enablePerformanceMonitoring: true,
+          enableAdaptiveQuality: true,
+          enableSmartCaching: true,
+          enableEnhancedErrorHandling: true,
+        });
 
         // Check for app updates (in production)
         if (!__DEV__) {
@@ -147,7 +156,7 @@ export default function App() {
       <GestureHandlerRootView style={{ flex: 1 }}>
         <AvatarProvider>
           <StatusBar style="light" />
-          <AppNavigator linking={linking} />
+          <AppNavigator />
           <LyoAvatar />
           <AvatarChat />
         </AvatarProvider>
