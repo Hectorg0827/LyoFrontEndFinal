@@ -828,11 +828,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "600",
   },
-  courseAuthor: {
-    color: "#ddd",
-    fontSize: 12,
-    marginBottom: 8,
-  },
   toolIconImage: {
     width: 32,
     height: 32,

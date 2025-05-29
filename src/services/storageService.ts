@@ -1,9 +1,16 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import { ENV } from "../config/env";
-
-import { Course } from "./avatarService";
 import { ErrorHandler, ErrorType } from "./errorHandler";
+
+// Course interface definition (temporary - should be moved to a shared types file)
+interface Course {
+  id: string;
+  title: string;
+  description: string;
+  modules: any[];
+  [key: string]: any;
+}
 
 // Storage keys with environment prefix to avoid conflicts
 const STORAGE_KEYS = {
@@ -47,7 +54,7 @@ class StorageService {
     } catch (error) {
       console.error("Error caching enrolled courses:", error);
       throw ErrorHandler.createError(
-        ErrorType.STORAGE,
+        ErrorType.Storage,
         "Failed to cache enrolled courses",
         { error },
       );
@@ -83,7 +90,7 @@ class StorageService {
     } catch (error) {
       console.error(`Error caching course ${course.id}:`, error);
       throw ErrorHandler.createError(
-        ErrorType.STORAGE,
+        ErrorType.Storage,
         "Failed to cache course",
         { courseId: course.id, error },
       );
@@ -166,7 +173,7 @@ class StorageService {
     } catch (error) {
       console.error("Error adding to sync queue:", error);
       throw ErrorHandler.createError(
-        ErrorType.STORAGE,
+        ErrorType.Storage,
         "Failed to add operation to sync queue",
         { item, error },
       );
@@ -203,7 +210,7 @@ class StorageService {
     } catch (error) {
       console.error(`Error removing item ${id} from sync queue:`, error);
       throw ErrorHandler.createError(
-        ErrorType.STORAGE,
+        ErrorType.Storage,
         "Failed to remove item from sync queue",
         { id, error },
       );
@@ -219,7 +226,7 @@ class StorageService {
     } catch (error) {
       console.error("Error clearing sync queue:", error);
       throw ErrorHandler.createError(
-        ErrorType.STORAGE,
+        ErrorType.Storage,
         "Failed to clear sync queue",
         { error },
       );
@@ -247,7 +254,9 @@ class StorageService {
   async getLastSync(): Promise<number | null> {
     try {
       const syncJson = await AsyncStorage.getItem(STORAGE_KEYS.LAST_SYNC);
-      if (!syncJson) return null;
+      if (!syncJson) {
+        return null;
+      }
 
       const { timestamp } = JSON.parse(syncJson);
       return timestamp;
@@ -273,11 +282,20 @@ class StorageService {
     } catch (error) {
       console.error("Error clearing all cached data:", error);
       throw ErrorHandler.createError(
-        ErrorType.STORAGE,
+        ErrorType.Storage,
         "Failed to clear cached data",
         { error },
       );
     }
+  }
+
+  /**
+   * Alias for getCourseFromCache for backward compatibility
+   * @param courseId The ID of the course to retrieve
+   * @returns The cached course or null if not found
+   */
+  async getCourse(courseId: string): Promise<Course | null> {
+    return this.getCourseFromCache(courseId);
   }
 }
 

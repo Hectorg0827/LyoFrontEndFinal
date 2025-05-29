@@ -4,7 +4,7 @@ import {
   useInfiniteQuery,
   QueryKey as _QueryKey,
   QueryFunctionContext,
-  InfiniteData as _InfiniteData,
+  InfiniteData,
 } from "@tanstack/react-query";
 import { StatusBar } from "expo-status-bar";
 import React, { useMemo, useCallback } from "react";
@@ -74,7 +74,7 @@ export const HomeScreen: React.FC = () => {
   } = useInfiniteQuery<
     StoriesResponse, // TQueryFnData: Data type returned by queryFn for a single page
     AppError, // TError: Error type
-    StoriesResponse, // TData: For v4-like InfiniteData, this is TQueryFnData. The result.data will be InfiniteData<StoriesResponse>.
+    InfiniteData<StoriesResponse>, // TData: The result.data will be InfiniteData<StoriesResponse>
     string[], // TQueryKey: Type of the query key array
     number // TPageParam: Type of the page parameter
   >({
@@ -108,7 +108,7 @@ export const HomeScreen: React.FC = () => {
   } = useInfiniteQuery<
     FeedResponse, // TQueryFnData
     AppError, // TError
-    FeedResponse, // TData: For v4-like InfiniteData, this is TQueryFnData. The result.data will be InfiniteData<FeedResponse>.
+    InfiniteData<FeedResponse>, // TData: The result.data will be InfiniteData<FeedResponse>
     string[], // TQueryKey
     string | undefined // TPageParam
   >({
@@ -123,20 +123,22 @@ export const HomeScreen: React.FC = () => {
     initialPageParam: undefined,
   });
 
-  const stories: Story[] = useMemo(() => {
-    // Assuming storiesDataResult.pages is an array of StoriesResponse
-    return (
-      storiesDataResult?.pages.flatMap(
-        (page: StoriesResponse) => page.stories,
-      ) ?? []
+    const stories: Story[] = useMemo(() => {
+    // Extract stories from the pages array  
+    if (!storiesDataResult?.pages) {
+      return [];
+    }
+    return storiesDataResult.pages.flatMap(
+      (page: StoriesResponse) => page.stories,
     );
   }, [storiesDataResult]);
 
   const posts: Post[] = useMemo(() => {
-    // Assuming feedDataResult.pages is an array of FeedResponse
-    return (
-      feedDataResult?.pages.flatMap((page: FeedResponse) => page.posts) ?? []
-    );
+    // Extract posts from the pages array
+    if (!feedDataResult?.pages) {
+      return [];
+    }
+    return feedDataResult.pages.flatMap((page: FeedResponse) => page.posts);
   }, [feedDataResult]);
 
   const handleRefresh = useCallback(() => {

@@ -356,6 +356,61 @@ class AvatarService {
       return `temp_session_${Date.now()}`;
     }
   }
+
+  /**
+   * Speak a response using text-to-speech (voice synthesis)
+   */
+  async speakResponse(text: string): Promise<void> {
+    try {
+      const prefs = await this.getUserPreferences();
+      
+      if (!prefs.voiceEnabled) {
+        console.log("Voice synthesis disabled in user preferences");
+        return;
+      }
+
+      // Use Expo Speech API for text-to-speech
+      const Speech = require('expo-speech');
+      
+      const options = {
+        language: prefs.preferredLanguage || 'en-US',
+        pitch: prefs.voicePitch || 1.0,
+        rate: prefs.voiceRate || 1.0,
+      };
+
+      await Speech.speak(text, options);
+      
+    } catch (error: any) {
+      console.error("Error in voice synthesis:", error);
+      // Gracefully fail - don't throw error for non-critical feature
+    }
+  }
+
+  /**
+   * Generate a course using AI
+   */
+  async generateCourse(
+    topic: string,
+    difficulty: "beginner" | "intermediate" | "advanced" = "beginner"
+  ): Promise<any> {
+    try {
+      const response = await apiService.post("/ai/course/generate", {
+        topic,
+        difficulty,
+        includeQuizzes: true,
+        includePracticeExercises: true,
+        duration: 60, // 1 hour default
+      });
+      
+      return response;
+    } catch (error: any) {
+      throw new AppError(
+        ErrorType.Server,
+        "Failed to generate course",
+        error
+      );
+    }
+  }
 }
 
 export const avatarService = new AvatarService();

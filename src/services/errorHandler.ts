@@ -253,6 +253,47 @@ export class ErrorHandler {
       }
     }
   }
+
+  static isErrorType(error: any, errorType: ErrorType): boolean {
+    if (error instanceof AppErrorClass) {
+      return error.type === errorType;
+    }
+
+    // Handle legacy error type checking
+    if (error?.type === errorType) {
+      return true;
+    }
+
+    // Handle string-based error types
+    if (typeof error === "string" && error === errorType) {
+      return true;
+    }
+
+    return false;
+  }
+
+  static handleError(errorInfo: {
+    error: any;
+    context?: string;
+    action?: string;
+    userMessage?: string;
+  }): AppErrorClass {
+    const processedError = this.processError(errorInfo.error, errorInfo.context);
+
+    // Log the error with additional context
+    console.error(
+      `[ErrorHandler] Error in ${errorInfo.context || "Unknown"} - ${
+        errorInfo.action || "Action"
+      }:`,
+      {
+        error: processedError,
+        userMessage: errorInfo.userMessage,
+      },
+    );
+
+    // Return the processed error
+    return processedError;
+  }
 }
 
 export { ErrorType, AppErrorClass as AppError };

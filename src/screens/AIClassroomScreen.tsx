@@ -134,16 +134,18 @@ const AIClassroomScreen: React.FC = () => {
       } else if (ErrorHandler.isErrorType(error, ErrorType.NETWORK)) {
         // Network connectivity issue
         ErrorHandler.handleError({
-          type: ErrorType.NETWORK,
-          message: "Failed to load enrolled courses due to network issues",
           error: error as Error,
+          context: "AIClassroomScreen.fetchEnrolledCourses",
+          action: "loading enrolled courses",
+          userMessage: "Failed to load enrolled courses due to network issues",
         });
       } else {
         // General server or other error
         ErrorHandler.handleError({
-          type: ErrorType.Server,
-          message: "Failed to load enrolled courses",
           error: error as Error,
+          context: "AIClassroomScreen.fetchEnrolledCourses",
+          action: "loading enrolled courses",
+          userMessage: "Failed to load enrolled courses",
         });
       }
     } finally {
@@ -174,10 +176,10 @@ const AIClassroomScreen: React.FC = () => {
 
       // Handle errors gracefully
       ErrorHandler.handleError({
-        type: ErrorType.AiService,
-        message: "Failed to generate course",
         error: error as Error,
-        context: { topic, difficulty },
+        context: "AIClassroomScreen.generateCourse",
+        action: "generating course",
+        userMessage: "Failed to generate course",
       });
 
       // Show error message to user through the avatar
@@ -191,7 +193,9 @@ const AIClassroomScreen: React.FC = () => {
 
   // Add enrollment functionality to connect with backend
   const enrollInCourse = async () => {
-    if (!course) return;
+    if (!course) {
+      return;
+    }
 
     try {
       setAvatarState("processing");
@@ -224,16 +228,18 @@ const AIClassroomScreen: React.FC = () => {
         await avatarService.speakResponse(networkMessage);
 
         ErrorHandler.handleError({
-          type: ErrorType.NETWORK,
-          message: "Failed to enroll in course due to network issues",
           error: error as Error,
+          context: "AIClassroomScreen.enrollInCourse",
+          action: "enrolling in course",
+          userMessage: "Failed to enroll in course due to network issues",
         });
       } else {
         // Handle other enrollment errors
         ErrorHandler.handleError({
-          type: ErrorType.Server,
-          message: "Failed to enroll in course",
           error: error as Error,
+          context: "AIClassroomScreen.enrollInCourse",
+          action: "enrolling in course",
+          userMessage: "Failed to enroll in course",
         });
 
         avatarService.speakResponse(
@@ -296,15 +302,17 @@ const AIClassroomScreen: React.FC = () => {
         );
 
         ErrorHandler.handleError({
-          type: ErrorType.NETWORK,
-          message: "Failed to complete module due to network issues",
           error: error as Error,
+          context: "AIClassroomScreen.completeModule",
+          action: "completing module",
+          userMessage: "Failed to complete module due to network issues",
         });
       } else {
         ErrorHandler.handleError({
-          type: ErrorType.SERVER,
-          message: "Failed to mark module as completed",
           error: error as Error,
+          context: "AIClassroomScreen.completeModule",
+          action: "completing module",
+          userMessage: "Failed to mark module as completed",
         });
 
         avatarService.speakResponse(
@@ -324,7 +332,9 @@ const AIClassroomScreen: React.FC = () => {
       for (const courseId of offlineAvailableCourses) {
         // Fetch the course details from local storage
         const offlineCourse = await storageService.getCourse(courseId);
-        if (!offlineCourse) continue;
+        if (!offlineCourse) {
+          continue;
+        }
 
         // Enroll in the course
         await enrollmentService.enrollInCourse(offlineCourse);
@@ -338,7 +348,7 @@ const AIClassroomScreen: React.FC = () => {
 
         // Optionally, you could also update the overall course progress here
         const completedCount = offlineCourse.modules.filter(
-          (m) => m.completed,
+          (m: any) => m.completed,
         ).length;
         const totalModules = offlineCourse.modules.length;
         const newProgress = Math.round((completedCount / totalModules) * 100);
@@ -355,9 +365,10 @@ const AIClassroomScreen: React.FC = () => {
       console.error("Error syncing offline courses:", error);
 
       ErrorHandler.handleError({
-        type: ErrorType.SERVER,
-        message: "Failed to sync offline courses",
         error: error as Error,
+        context: "AIClassroomScreen.syncOfflineCourses",
+        action: "syncing offline courses",
+        userMessage: "Failed to sync offline courses",
       });
 
       avatarService.speakResponse(
@@ -972,12 +983,6 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(244, 67, 54, 0.2)",
     borderColor: "#F44336",
     borderWidth: 1,
-  },
-  difficultyText: {
-    color: "#ccc",
-    fontWeight: "500",
-    fontSize: 12,
-    textTransform: "uppercase",
   },
   difficultyTextBeginner: {
     color: "#4CAF50",

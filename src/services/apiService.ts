@@ -88,35 +88,35 @@ class ApiService {
   }
 
   async likePost(postId: string): Promise<void> {
-    if (useMockApi) {
+    if (await shouldUseMockData()) {
       return mockApiService.likePost(postId);
     }
     return api.post(`/posts/${postId}/like`);
   }
 
   async unlikePost(postId: string): Promise<void> {
-    if (useMockApi) {
+    if (await shouldUseMockData()) {
       return mockApiService.unlikePost(postId);
     }
     return api.delete(`/posts/${postId}/like`);
   }
 
   async savePost(postId: string): Promise<void> {
-    if (useMockApi) {
+    if (await shouldUseMockData()) {
       return mockApiService.savePost(postId);
     }
     return api.post(`/posts/${postId}/save`);
   }
 
   async unsavePost(postId: string): Promise<void> {
-    if (useMockApi) {
+    if (await shouldUseMockData()) {
       return mockApiService.unsavePost(postId);
     }
     return api.delete(`/posts/${postId}/save`);
   }
 
   async markStoryViewed(storyId: string): Promise<void> {
-    if (useMockApi) {
+    if (await shouldUseMockData()) {
       return mockApiService.markStoryViewed(storyId);
     }
     return api.post(`/stories/${storyId}/view`);
@@ -130,7 +130,7 @@ class ApiService {
     level?: string;
     query?: string;
   }): Promise<Course[]> {
-    if (useMockApi) {
+    if (await shouldUseMockData()) {
       return mockApiService.getCourses(filters);
     }
     return api.get<Course[]>("/courses", filters);
@@ -139,35 +139,35 @@ class ApiService {
   async getCourseDetails(
     courseId: string,
   ): Promise<{ course: Course; lessons: Lesson[] }> {
-    if (useMockApi) {
+    if (await shouldUseMockData()) {
       return mockApiService.getCourseDetails(courseId);
     }
     return api.get<{ course: Course; lessons: Lesson[] }>(`/courses/${courseId}`);
   }
 
   async getEnrolledCourses(): Promise<Course[]> {
-    if (useMockApi) {
+    if (await shouldUseMockData()) {
       return mockApiService.getEnrolledCourses();
     }
     return api.get<Course[]>("/user/courses");
   }
 
   async enrollCourse(courseId: string): Promise<void> {
-    if (useMockApi) {
+    if (await shouldUseMockData()) {
       return mockApiService.enrollCourse(courseId);
     }
     return api.post(`/courses/${courseId}/enroll`);
   }
 
   async completeLesson(courseId: string, lessonId: string): Promise<void> {
-    if (useMockApi) {
+    if (await shouldUseMockData()) {
       return mockApiService.completeLesson(courseId, lessonId);
     }
     return api.post(`/courses/${courseId}/lessons/${lessonId}/complete`);
   }
 
   async getLearningTools(): Promise<LearningTool[]> {
-    if (useMockApi) {
+    if (await shouldUseMockData()) {
       return mockApiService.getLearningTools();
     }
     return api.get<LearningTool[]>("/learning-tools");
@@ -177,7 +177,7 @@ class ApiService {
    * Avatar methods
    */
   async sendMessageToAvatar(message: string, sessionId?: string): Promise<any> {
-    if (useMockApi) {
+    if (await shouldUseMockData()) {
       return mockApiService.sendMessageToAvatar(message);
     }
     return api.post("/ai/avatar/message", { message, sessionId });
@@ -187,21 +187,21 @@ class ApiService {
    * User profile methods
    */
   async getUserProfile(): Promise<UserProfile> {
-    if (useMockApi) {
+    if (await shouldUseMockData()) {
       return mockApiService.getUserProfile();
     }
     return api.get<UserProfile>("/user/profile");
   }
 
   async getUserProfileById(userId: string): Promise<UserProfile> {
-    if (useMockApi) {
+    if (await shouldUseMockData()) {
       return mockApiService.getUserProfileById(userId);
     }
     return api.get<UserProfile>(`/users/${userId}/profile`);
   }
 
   async updateUserProfile(profileData: Partial<UserProfile>): Promise<UserProfile> {
-    if (useMockApi) {
+    if (await shouldUseMockData()) {
       return mockApiService.updateUserProfile(profileData);
     }
     return api.put<UserProfile>("/user/profile", profileData);
@@ -211,14 +211,14 @@ class ApiService {
    * User follow methods
    */
   async followUser(userId: string): Promise<void> {
-    if (useMockApi) {
+    if (await shouldUseMockData()) {
       return mockApiService.followUser(userId);
     }
     return api.post(`/users/${userId}/follow`);
   }
 
   async unfollowUser(userId: string): Promise<void> {
-    if (useMockApi) {
+    if (await shouldUseMockData()) {
       return mockApiService.unfollowUser(userId);
     }
     return api.delete(`/users/${userId}/follow`);
@@ -228,7 +228,7 @@ class ApiService {
    * Achievement methods
    */
   async getAchievements(): Promise<UserProfile['achievements']> {
-    if (useMockApi) {
+    if (await shouldUseMockData()) {
       return mockApiService.getAchievements();
     }
     return api.get<UserProfile['achievements']>("/user/achievements");
@@ -238,21 +238,21 @@ class ApiService {
    * Notification methods
    */
   async getNotifications(limit: number = 20, offset: number = 0): Promise<Notification[]> {
-    if (useMockApi) {
+    if (await shouldUseMockData()) {
       return mockApiService.getNotifications(limit, offset);
     }
     return api.get<Notification[]>("/notifications", { limit, offset });
   }
 
   async markNotificationsRead(notificationIds: string[]): Promise<void> {
-    if (useMockApi) {
+    if (await shouldUseMockData()) {
       return mockApiService.markNotificationsRead(notificationIds);
     }
     return api.post("/notifications/read", { notificationIds });
   }
 
   async markAllNotificationsRead(): Promise<void> {
-    if (useMockApi) {
+    if (await shouldUseMockData()) {
       return mockApiService.markAllNotificationsRead();
     }
     return api.post("/notifications/read-all");
@@ -266,7 +266,7 @@ class ApiService {
     limit: number = 20,
     offset: number = 0
   ): Promise<BookshelfItem[]> {
-    if (useMockApi) {
+    if (await shouldUseMockData()) {
       return mockApiService.getBookshelfItems(type, limit, offset);
     }
     return api.get<BookshelfItem[]>("/user/bookshelf", { type, limit, offset });
@@ -276,63 +276,63 @@ class ApiService {
    * Community methods
    */
   async getEvents(latitude: number, longitude: number, radiusInKm: number = 10): Promise<Event[]> {
-    if (useMockApi) {
+    if (await shouldUseMockData()) {
       return mockApiService.getEvents(latitude, longitude, radiusInKm);
     }
     return api.get<Event[]>("/events", { latitude, longitude, radius: radiusInKm });
   }
 
   async getEventDetails(eventId: string): Promise<Event> {
-    if (useMockApi) {
+    if (await shouldUseMockData()) {
       return mockApiService.getEventDetails(eventId);
     }
     return api.get<Event>(`/events/${eventId}`);
   }
 
   async attendEvent(eventId: string): Promise<void> {
-    if (useMockApi) {
+    if (await shouldUseMockData()) {
       return mockApiService.attendEvent(eventId);
     }
     return api.post(`/events/${eventId}/attend`);
   }
 
   async unattendEvent(eventId: string): Promise<void> {
-    if (useMockApi) {
+    if (await shouldUseMockData()) {
       return mockApiService.unattendEvent(eventId);
     }
     return api.delete(`/events/${eventId}/attend`);
   }
 
   async getCommunities(latitude: number, longitude: number, radiusInKm: number = 10): Promise<Community[]> {
-    if (useMockApi) {
+    if (await shouldUseMockData()) {
       return mockApiService.getCommunities(latitude, longitude, radiusInKm);
     }
     return api.get<Community[]>("/communities", { latitude, longitude, radius: radiusInKm });
   }
 
   async getCommunityDetails(communityId: string): Promise<{ community: Community; posts: Post[] }> {
-    if (useMockApi) {
+    if (await shouldUseMockData()) {
       return mockApiService.getCommunityDetails(communityId);
     }
     return api.get<{ community: Community; posts: Post[] }>(`/communities/${communityId}`);
   }
 
   async joinCommunity(communityId: string): Promise<void> {
-    if (useMockApi) {
+    if (await shouldUseMockData()) {
       return mockApiService.joinCommunity(communityId);
     }
     return api.post(`/communities/${communityId}/join`);
   }
 
   async leaveCommunity(communityId: string): Promise<void> {
-    if (useMockApi) {
+    if (await shouldUseMockData()) {
       return mockApiService.leaveCommunity(communityId);
     }
     return api.delete(`/communities/${communityId}/join`);
   }
 
   async createPost(communityId: string, data: { content: string; imageUrl?: string }): Promise<Post> {
-    if (useMockApi) {
+    if (await shouldUseMockData()) {
       return mockApiService.createPost(communityId, data);
     }
     return api.post<Post>(`/communities/${communityId}/posts`, data);
@@ -342,7 +342,7 @@ class ApiService {
    * Push notification methods
    */
   async registerPushToken(token: string, deviceType: string): Promise<boolean> {
-    if (useMockApi) {
+    if (await shouldUseMockData()) {
       return mockApiService.registerPushToken(token, deviceType);
     }
     await api.post("/user/push-token", { token, device: deviceType });
@@ -350,7 +350,7 @@ class ApiService {
   }
 
   async updateNotificationPreferences(preferences: Record<string, boolean>): Promise<void> {
-    if (useMockApi) {
+    if (await shouldUseMockData()) {
       return mockApiService.updateNotificationPreferences(preferences);
     }
     return api.put("/user/notification-preferences", { preferences });
@@ -369,6 +369,39 @@ class ApiService {
 
   getToken(): string | null {
     return api.getToken();
+  }
+
+  /**
+   * Generic HTTP methods
+   */
+  async get<T = any>(endpoint: string, params?: Record<string, any>): Promise<T> {
+    if (await shouldUseMockData()) {
+      // For generic endpoints, try to delegate to the underlying api
+      return api.get<T>(endpoint, params);
+    }
+    return api.get<T>(endpoint, params);
+  }
+
+  async post<T = any>(endpoint: string, data?: any): Promise<T> {
+    if (await shouldUseMockData()) {
+      // For generic endpoints, try to delegate to the underlying api
+      return api.post<T>(endpoint, data);
+    }
+    return api.post<T>(endpoint, data);
+  }
+
+  async put<T = any>(endpoint: string, data?: any): Promise<T> {
+    if (await shouldUseMockData()) {
+      return api.put<T>(endpoint, data);
+    }
+    return api.put<T>(endpoint, data);
+  }
+
+  async delete<T = any>(endpoint: string): Promise<T> {
+    if (await shouldUseMockData()) {
+      return api.delete<T>(endpoint);
+    }
+    return api.delete<T>(endpoint);
   }
 }
 
