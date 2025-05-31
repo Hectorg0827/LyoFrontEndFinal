@@ -14,6 +14,20 @@ module.exports = function (api) {
           allowUndefined: true,
         },
       ],
+      ["module-resolver", {
+        root: ["."],
+        alias: {
+          "@components": "./src/components",
+          "@screens": "./src/screens",
+          "@services": "./src/services",
+          "@store": "./src/store",
+          "@navigation": "./src/navigation",
+          "@utils": "./src/utils",
+          "@types": "./src/types",
+          "@config": "./src/config"
+        },
+        extensions: ['.js', '.jsx', '.ts', '.tsx']
+      }],
       "nativewind/babel",
       "react-native-reanimated/plugin",
     ],
