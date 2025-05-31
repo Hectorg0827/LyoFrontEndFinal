@@ -1,5 +1,4 @@
 // Performance monitoring utility for avatar system
-import { Performance } from 'react-native';
 
 interface PerformanceMetrics {
   renderTime: number;
@@ -32,7 +31,7 @@ export class AvatarPerformanceMonitor {
     console.log('📊 Initializing performance monitor...');
     this.isRunning = true;
     
-    if (config?.enableRealTimeTracking) {
+    if (config && config.enableRealTimeTracking) {
       this.startRealTimeTracking(config.trackingInterval || 1000);
     }
   }
@@ -79,18 +78,18 @@ export class AvatarPerformanceMonitor {
   }
 
   static startRenderMeasurement(): void {
-    this.renderStartTime = Performance.now();
+    this.renderStartTime = performance.now();
   }
 
   static endRenderMeasurement(): void {
     if (this.renderStartTime > 0) {
-      this.metrics.renderTime = Performance.now() - this.renderStartTime;
+      this.metrics.renderTime = performance.now() - this.renderStartTime;
       this.renderStartTime = 0;
     }
   }
 
   static measureAnimationPerformance(): void {
-    const currentTime = Performance.now();
+    const currentTime = performance.now();
     if (this.lastFrameTime > 0) {
       const frameDuration = currentTime - this.lastFrameTime;
       this.metrics.animationFrameRate = 1000 / frameDuration;
@@ -100,11 +99,11 @@ export class AvatarPerformanceMonitor {
   }
 
   static measureVoiceLatency(startTime: number): void {
-    this.metrics.voiceLatency = Performance.now() - startTime;
+    this.metrics.voiceLatency = performance.now() - startTime;
   }
 
   static measureApiResponseTime(startTime: number): void {
-    this.metrics.apiResponseTime = Performance.now() - startTime;
+    this.metrics.apiResponseTime = performance.now() - startTime;
   }
 
   static getMetrics(): PerformanceMetrics {
