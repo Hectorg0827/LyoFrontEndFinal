@@ -20,7 +20,11 @@
       "bundleIdentifier": "com.lyo.LyoAILearningAssistant",
       "buildNumber": "1.0.0",
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSMicrophoneUsageDescription": "This app uses the microphone to record your voice for the AI assistant interaction.",
+        "NSCameraUsageDescription": "This app uses the camera for profile pictures and scanning learning materials.",
+        "NSPhotoLibraryUsageDescription": "This app uses your photo library for selecting profile pictures and sharing learning content.",
+        "NSLocationWhenInUseUsageDescription": "This app uses your location to find nearby learning communities and events."
       }
     },
     "android": {
@@ -28,14 +32,19 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#121212"
       },
-      "package": "com.lyo.app"
+      "package": "com.lyo.app",
+      "permissions": [
+        "RECORD_AUDIO",
+        "CAMERA",
+        "ACCESS_FINE_LOCATION"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
       "expo-notifications",
-      "expo-localization",
+      "expo-localization", 
       "sentry-expo",
       "expo-asset"
     ],
