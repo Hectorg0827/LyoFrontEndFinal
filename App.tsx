@@ -11,23 +11,25 @@ import {
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { registerRootComponent } from "expo";
 
-import AvatarChat from "./src/components/Avatar/AvatarChat";
-import { AvatarProvider } from "./src/components/Avatar/AvatarContext";
-import LyoAvatar from "./src/components/Avatar/LyoAvatar";
-import AppNavigator from "./src/navigation/AppNavigator";
-import linking from "./src/navigation/linking";
-import { analyticsService } from "./src/services/analyticsService";
-import { initializeApi } from "./src/services/apiMiddleware";
-import { appPackagingService } from "./src/services/appPackagingService";
-import { initializeAvatarSystem } from "./src/services/avatarSystemInit";
-import { localizationService } from "./src/services/localizationService";
-import { notificationService } from "./src/services/notificationService";
-import { performanceMonitoringService } from "./src/services/performanceMonitoringService";
+import AvatarChat from "@components/Avatar/AvatarChat";
+import { AvatarProvider } from "@components/Avatar/AvatarContext";
+import LyoAvatar from "@components/Avatar/LyoAvatar";
+import AppNavigator from "@navigation/AppNavigator";
+import linking from "@navigation/linking";
+import { analyticsService } from "@services/analyticsService";
+import { initializeApi } from "@services/apiMiddleware";
+import { appPackagingService } from "@services/appPackagingService";
+import { initializeAvatarSystem } from "@services/avatarSystemInit";
+import { localizationService } from "@services/localizationService";
+import { notificationService } from "@services/notificationService";
+import { performanceMonitoringService } from "@services/performanceMonitoringService";
+import { ErrorHandler, ErrorType } from "@utils/errorHandler";
 
 // Keep splash screen visible while the app initializes
-SplashScreen.preventAutoHideAsync().catch((error) =>
-  console.warn("Error preventing splash screen auto hide:", error),
-);
+SplashScreen.preventAutoHideAsync().catch((error) => {
+  const appError = ErrorHandler.processError(error, "App.preventAutoHideAsync");
+  console.warn("Error preventing splash screen auto hide:", appError.message);
+});
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -58,6 +60,7 @@ function App() {
         performanceMonitoringService.recordAppStart();
 
         // Initialize localization
+        // TODO: Implement proper localization
 
         // Initialize notification service
         await notificationService.configure();
@@ -76,23 +79,31 @@ function App() {
 
         // Check for app updates (in production)
         if (!__DEV__) {
-          appPackagingService
-            .checkForUpdates(true)
-            .then(async (updateAvailable) => {
-              if (updateAvailable) {
-                console.log("Update available, will apply on next app restart");
-              }
-            });
+          try {
+            const updateAvailable = await appPackagingService.checkForUpdates(true);
+            if (updateAvailable) {
+              console.log("Update available, will apply on next app restart");
+            }
+          } catch (updateError) {
+            const appError = ErrorHandler.processError(updateError, "App.checkForUpdates");
+            console.warn("Update check failed:", appError.message);
+          }
         }
 
         // Mark app as ready
         setIsReady(true);
       } catch (error) {
-        console.error("Failed to initialize app:", error);
+        const appError = ErrorHandler.processError(error, "App.setupApp");
+        console.error("Failed to initialize app:", appError);
         setIsReady(true); // Still mark as ready to avoid getting stuck
       } finally {
-        // Hide splash screen
-        await SplashScreen.hideAsync();
+        try {
+          // Hide splash screen
+          await SplashScreen.hideAsync();
+        } catch (splashError) {
+          const appError = ErrorHandler.processError(splashError, "App.hideAsync");
+          console.warn("Error hiding splash screen:", appError.message);
+        }
       }
     };
 
@@ -112,26 +123,35 @@ function App() {
 
   // Handle app state changes
   const handleAppStateChange = (nextAppState: AppStateStatus) => {
-    // Track when app goes to background or comes to foreground
-    if (appState.match(/inactive|background/) && nextAppState === "active") {
-      // App came to foreground
-      analyticsService.logEvent("app_foreground");
-      performanceMonitoringService.recordAppForeground();
+    try {
+      // Track when app goes to background or comes to foreground
+      if (appState.match(/inactive|background/) && nextAppState === "active") {
+        // App came to foreground
+        analyticsService.logEvent("app_foreground");
+        performanceMonitoringService.recordAppForeground();
 
-      // Check for updates when app comes to foreground
-      if (!__DEV__) {
-        appPackagingService.checkForUpdates(false);
+        // Check for updates when app comes to foreground
+        if (!__DEV__) {
+          appPackagingService.checkForUpdates(false)
+            .catch(error => {
+              const appError = ErrorHandler.processError(error, "App.foregroundUpdateCheck");
+              console.warn("Update check failed:", appError.message);
+            });
+        }
+      } else if (
+        appState === "active" &&
+        nextAppState.match(/inactive|background/)
+      ) {
+        // App went to background
+        analyticsService.logEvent("app_background");
+        performanceMonitoringService.recordAppBackground();
       }
-    } else if (
-      appState === "active" &&
-      nextAppState.match(/inactive|background/)
-    ) {
-      // App went to background
-      analyticsService.logEvent("app_background");
-      performanceMonitoringService.recordAppBackground();
-    }
 
-    setAppState(nextAppState);
+      setAppState(nextAppState);
+    } catch (error) {
+      const appError = ErrorHandler.processError(error, "App.handleAppStateChange");
+      console.error("Error handling app state change:", appError);
+    }
   };
 
   // Show loading screen while initializing
