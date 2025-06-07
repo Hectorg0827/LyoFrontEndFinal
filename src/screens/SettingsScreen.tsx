@@ -276,7 +276,7 @@ const SettingsScreen: React.FC = () => {
 
           <TouchableOpacity
             style={styles.settingItem}
-            onPress={() => navigation.navigate("ProfileEdit")}
+            onPress={() => navigation.navigate("ProfileScreen" as never)}
           >
             <Ionicons
               name="person-outline"
@@ -300,7 +300,7 @@ const SettingsScreen: React.FC = () => {
 
           <TouchableOpacity
             style={styles.settingItem}
-            onPress={() => navigation.navigate("ChangePassword")}
+            onPress={() => navigation.navigate("ProfileScreen" as never)}
           >
             <Ionicons
               name="lock-closed-outline"
@@ -324,7 +324,7 @@ const SettingsScreen: React.FC = () => {
 
           <TouchableOpacity
             style={styles.settingItem}
-            onPress={() => navigation.navigate("PrivacySettings")}
+            onPress={() => navigation.navigate("PrivacyPolicy" as never)}
           >
             <Ionicons
               name="shield-outline"
@@ -478,7 +478,7 @@ const SettingsScreen: React.FC = () => {
 
           <TouchableOpacity
             style={styles.settingItem}
-            onPress={() => navigation.navigate("VoiceSettings")}
+            onPress={() => navigation.navigate("AvatarSettings" as never)}
           >
             <Ionicons
               name="mic-outline"
@@ -502,7 +502,7 @@ const SettingsScreen: React.FC = () => {
 
           <TouchableOpacity
             style={styles.settingItem}
-            onPress={() => navigation.navigate("AIPreferences")}
+            onPress={() => navigation.navigate("AvatarSettings" as never)}
           >
             <Ionicons
               name="settings-outline"
@@ -630,7 +630,7 @@ const SettingsScreen: React.FC = () => {
 
           <TouchableOpacity
             style={styles.settingItem}
-            onPress={() => navigation.navigate("DataManagement")}
+            onPress={() => navigation.navigate("Settings", { screen: "DataManagement" })}
           >
             <Ionicons
               name="cloud-download-outline"
@@ -691,7 +691,7 @@ const SettingsScreen: React.FC = () => {
           <TouchableOpacity
             style={styles.settingItem}
             onPress={() =>
-              navigation.navigate("LegalDocuments", { screen: "PrivacyPolicy" })
+              navigation.navigate("PrivacyPolicy" as never)
             }
           >
             <Ionicons
@@ -717,9 +717,7 @@ const SettingsScreen: React.FC = () => {
           <TouchableOpacity
             style={styles.settingItem}
             onPress={() =>
-              navigation.navigate("LegalDocuments", {
-                screen: "TermsOfService",
-              })
+              navigation.navigate("TermsOfService" as never)
             }
           >
             <Ionicons
