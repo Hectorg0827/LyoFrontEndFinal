@@ -1,0 +1,266 @@
+env: load .env.development .env
+env: export API_URL API_BASE_URL ENVIRONMENT STORAGE_PREFIX APP_ENV FEATURE_FLAGS DEBUG_MODE OPENAI_API_KEY ANALYTICS_KEY ANOTHER_VARIABLE
+› Planning build
+› Executing react-native Pods/hermes-engine » [CP-User] [Hermes] Replace Hermes for the right configuration, if needed
+› Preparing Pods/ExpoFileSystem-ExpoFileSystem_privacy » ResourceBundle-ExpoFileSystem_privacy-ExpoFileSystem-Info.plist
+› Preparing Pods/ExpoDevice-ExpoDevice_privacy » ResourceBundle-ExpoDevice_privacy-ExpoDevice-Info.plist
+› Preparing Pods/EXNotifications-ExpoNotifications_privacy » ResourceBundle-ExpoNotifications_privacy-EXNotifications-Info.plist
+› Preparing Pods/EXConstants-ExpoConstants_privacy » ResourceBundle-ExpoConstants_privacy-EXConstants-Info.plist
+› Preparing expo-constants Pods/EXConstants-EXConstants » ResourceBundle-EXConstants-EXConstants-Info.plist
+› Preparing Pods/EXApplication-ExpoApplication_privacy » ResourceBundle-ExpoApplication_privacy-EXApplication-Info.plist
+› Preparing Pods/React-Core-RCTI18nStrings » ResourceBundle-RCTI18nStrings-React-Core-Info.plist
+› Preparing Pods/RNCAsyncStorage-RNCAsyncStorage_resources » ResourceBundle-RNCAsyncStorage_resources-RNCAsyncStorage-Info.plist
+› Executing react-native Pods/hermes-engine » [CP] Copy XCFrameworks
+› Compiling react-native Pods/React-Mapbuffer » MapBuffer.cpp
+› Compiling react-native Pods/React-rendererdebug » DebugStringConvertible.cpp
+› Compiling react-native Pods/RCT-Folly » AtFork.cpp
+› Compiling react-native Pods/DoubleConversion » bignum.cc
+› Compiling react-native Pods/Yoga » AbsoluteLayout.cpp
+› Compiling react-native Pods/glog » demangle.cc
+› Compiling react-native Pods/React-perflogger » BridgeNativeModulePerfLogger.cpp
+› Compiling react-native Pods/ReactCommon » CxxTurboModuleUtils.cpp
+› Compiling react-native Pods/React-utils » CoreFeatures.cpp
+› Compiling react-native Pods/React-jsinspector » ExecutionContext.cpp
+› Compiling react-native Pods/glog » vlog_is_on.cc
+› Compiling react-native Pods/glog » utilities.cc
+› Compiling react-native Pods/glog » symbolize.cc
+› Compiling react-native Pods/glog » signalhandler.cc
+› Compiling react-native Pods/glog » raw_logging.cc
+› Compiling react-native Pods/glog » logging.cc
+› Compiling react-native Pods/glog » glog-dummy.m
+› Compiling react-native Pods/fmt » format.cc
+› Compiling react-native Pods/fmt » fmt-dummy.m
+› Compiling react-native Pods/Yoga » event.cpp
+› Compiling react-native Pods/Yoga » YGValue.cpp
+› Compiling react-native Pods/Yoga » YGPixelGrid.cpp
+› Compiling react-native Pods/Yoga » YGNodeStyle.cpp
+› Compiling react-native Pods/Yoga » YGNodeLayout.cpp
+› Compiling react-native Pods/Yoga » YGNode.cpp
+› Compiling react-native Pods/Yoga » YGEnums.cpp
+› Compiling react-native Pods/Yoga » YGConfig.cpp
+› Compiling react-native Pods/Yoga » PixelGrid.cpp
+› Compiling react-native Pods/Yoga » Node.cpp
+› Packaging react-native Pods/glog » libglog.a
+› Packaging react-native Pods/fmt » libfmt.a
+› Compiling react-native Pods/Yoga » Log.cpp
+› Compiling react-native Pods/Yoga » LayoutResults.cpp
+› Compiling react-native Pods/Yoga » FlexLine.cpp
+› Compiling react-native Pods/Yoga » Config.cpp
+› Compiling react-native Pods/Yoga » CalculateLayout.cpp
+› Compiling react-native Pods/Yoga » Cache.cpp
+› Compiling react-native Pods/Yoga » Baseline.cpp
+› Compiling react-native Pods/Yoga » AssertFatal.cpp
+› Compiling react-native Pods/ReactCommon » TurboModuleUtils.cpp
+› Compiling react-native Pods/ReactCommon » TurboModulePerfLogger.cpp
+› Compiling react-native Pods/ReactCommon » TurboModuleBinding.cpp
+› Compiling react-native Pods/ReactCommon » TurboModule.cpp
+› Compiling react-native Pods/ReactCommon » TurboCxxModule.cpp
+› Compiling react-native Pods/ReactCommon » LongLivedObject.cpp
+› Compiling react-native Pods/React-utils » jsi.cpp
+› Compiling react-native Pods/React-utils » RunLoopObserver.cpp
+› Compiling react-native Pods/React-utils » ManagedObjectWrapper.mm
+› Compiling react-native Pods/React-rendererdebug » DebugStringConvertibleItem.cpp
+› Compiling react-native Pods/React-jsinspector » RuntimeTarget.cpp
+› Compiling react-native Pods/React-jsinspector » RuntimeAgent.cpp
+› Compiling react-native Pods/React-jsinspector » Parsing.cpp
+› Compiling react-native Pods/React-jsinspector » PageTarget.cpp
+› Compiling react-native Pods/React-jsinspector » PageAgent.cpp
+› Compiling react-native Pods/React-jsinspector » InstanceTarget.cpp
+› Compiling react-native Pods/React-jsinspector » InstanceAgent.cpp
+› Compiling react-native Pods/React-jsinspector » InspectorUtilities.cpp
+› Compiling react-native Pods/React-jsinspector » InspectorPackagerConnection.cpp
+› Compiling react-native Pods/React-jsinspector » InspectorInterfaces.cpp
+› Compiling react-native Pods/React-jsinspector » InspectorFlags.cpp
+› Compiling react-native Pods/React-jsinspector » FallbackRuntimeAgentDelegate.cpp
+› Compiling react-native Pods/React-jsinspector » ExecutionContextManager.cpp
+› Compiling react-native Pods/React-jsiexecutor » JSIExecutor.cpp
+› Compiling react-native Pods/React-jsi » JSIDynamic.cpp
+› Compiling react-native Pods/React-jserrorhandler » JsErrorHandler.cpp
+› Compiling react-native Pods/React-hermes » ConnectionDemux.cpp
+› Compiling react-native Pods/React-graphics » Color.cpp
+
+❌  (ios/Pods/Headers/Public/React-utils/react/utils/hash_combine.h:16:1)
+
+  14 | 
+  15 | template <typename T>
+> 16 | concept Hashable = !std::is_same_v<T, const char*> && (requires(T a) {
+     | ^ unknown type name 'concept'
+  17 |   { std::hash<T>{}(a) } -> std::convertible_to<std::size_t>;
+  18 | });
+  19 | 
+
+
+❌  (ios/Pods/Headers/Public/React-utils/react/utils/hash_combine.h:16:65)
+
+  14 | 
+  15 | template <typename T>
+> 16 | concept Hashable = !std::is_same_v<T, const char*> && (requires(T a) {
+     |                                                                 ^ 'T' does not refer to a value
+  17 |   { std::hash<T>{}(a) } -> std::convertible_to<std::size_t>;
+  18 | });
+  19 | 
+
+
+❌  (ios/Pods/Headers/Public/React-utils/react/utils/hash_combine.h:20:11)
+
+  18 | });
+  19 | 
+> 20 | template <Hashable T, Hashable... Rest>
+     |           ^ unknown type name 'Hashable'
+  21 | void hash_combine(std::size_t& seed, const T& v, const Rest&... rest) {
+  22 |   seed ^= std::hash<T>{}(v) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+  23 |   (hash_combine(seed, rest), ...);
+
+
+❌  (ios/Pods/Headers/Public/React-utils/react/utils/hash_combine.h:20:23)
+
+  18 | });
+  19 | 
+> 20 | template <Hashable T, Hashable... Rest>
+     |                       ^ unknown type name 'Hashable'
+  21 | void hash_combine(std::size_t& seed, const T& v, const Rest&... rest) {
+  22 |   seed ^= std::hash<T>{}(v) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+  23 |   (hash_combine(seed, rest), ...);
+
+
+❌  (ios/Pods/Headers/Public/React-utils/react/utils/hash_combine.h:21:44)
+
+  19 | 
+  20 | template <Hashable T, Hashable... Rest>
+> 21 | void hash_combine(std::size_t& seed, const T& v, const Rest&... rest) {
+     |                                            ^ unknown type name 'T'
+  22 |   seed ^= std::hash<T>{}(v) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+  23 |   (hash_combine(seed, rest), ...);
+  24 | }
+
+
+❌  (ios/Pods/Headers/Public/React-utils/react/utils/hash_combine.h:21:56)
+
+  19 | 
+  20 | template <Hashable T, Hashable... Rest>
+> 21 | void hash_combine(std::size_t& seed, const T& v, const Rest&... rest) {
+     |                                                        ^ unknown type name 'Rest'
+  22 |   seed ^= std::hash<T>{}(v) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+  23 |   (hash_combine(seed, rest), ...);
+  24 | }
+
+
+❌  (ios/Pods/Headers/Public/React-utils/react/utils/hash_combine.h:21:61)
+
+  19 | 
+  20 | template <Hashable T, Hashable... Rest>
+> 21 | void hash_combine(std::size_t& seed, const T& v, const Rest&... rest) {
+     |                                                             ^ type 'const int &' of function parameter pack does not contain any unexpanded parameter packs
+  22 |   seed ^= std::hash<T>{}(v) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+  23 |   (hash_combine(seed, rest), ...);
+  24 | }
+
+
+❌  (ios/Pods/Headers/Public/React-utils/react/utils/hash_combine.h:22:21)
+
+  20 | template <Hashable T, Hashable... Rest>
+  21 | void hash_combine(std::size_t& seed, const T& v, const Rest&... rest) {
+> 22 |   seed ^= std::hash<T>{}(v) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+     |                     ^ template argument for template type parameter must be a type
+  23 |   (hash_combine(seed, rest), ...);
+  24 | }
+  25 | 
+
+
+❌  (ios/Pods/Headers/Public/React-utils/react/utils/hash_combine.h:23:30)
+
+  21 | void hash_combine(std::size_t& seed, const T& v, const Rest&... rest) {
+  22 |   seed ^= std::hash<T>{}(v) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+> 23 |   (hash_combine(seed, rest), ...);
+     |                              ^ pack expansion does not contain any unexpanded parameter packs
+  24 | }
+  25 | 
+  26 | template <Hashable T, Hashable... Args>
+
+
+❌  (ios/Pods/Headers/Public/React-utils/react/utils/hash_combine.h:26:11)
+
+  24 | }
+  25 | 
+> 26 | template <Hashable T, Hashable... Args>
+     |           ^ unknown type name 'Hashable'
+  27 | std::size_t hash_combine(const T& v, const Args&... args) {
+  28 |   std::size_t seed = 0;
+  29 |   hash_combine<T, Args...>(seed, v, args...);
+
+
+❌  (ios/Pods/Headers/Public/React-utils/react/utils/hash_combine.h:26:23)
+
+  24 | }
+  25 | 
+> 26 | template <Hashable T, Hashable... Args>
+     |                       ^ unknown type name 'Hashable'
+  27 | std::size_t hash_combine(const T& v, const Args&... args) {
+  28 |   std::size_t seed = 0;
+  29 |   hash_combine<T, Args...>(seed, v, args...);
+
+
+❌  (ios/Pods/Headers/Public/React-utils/react/utils/hash_combine.h:27:32)
+
+  25 | 
+  26 | template <Hashable T, Hashable... Args>
+> 27 | std::size_t hash_combine(const T& v, const Args&... args) {
+     |                                ^ unknown type name 'T'
+  28 |   std::size_t seed = 0;
+  29 |   hash_combine<T, Args...>(seed, v, args...);
+  30 |   return seed;
+
+
+❌  (ios/Pods/Headers/Public/React-utils/react/utils/hash_combine.h:27:44)
+
+  25 | 
+  26 | template <Hashable T, Hashable... Args>
+> 27 | std::size_t hash_combine(const T& v, const Args&... args) {
+     |                                            ^ unknown type name 'Args'
+  28 |   std::size_t seed = 0;
+  29 |   hash_combine<T, Args...>(seed, v, args...);
+  30 |   return seed;
+
+
+❌  (ios/Pods/Headers/Public/React-utils/react/utils/hash_combine.h:27:49)
+
+  25 | 
+  26 | template <Hashable T, Hashable... Args>
+> 27 | std::size_t hash_combine(const T& v, const Args&... args) {
+     |                                                 ^ type 'const int &' of function parameter pack does not contain any unexpanded parameter packs
+  28 |   std::size_t seed = 0;
+  29 |   hash_combine<T, Args...>(seed, v, args...);
+  30 |   return seed;
+
+
+❌  (ios/Pods/Headers/Public/React-utils/react/utils/hash_combine.h:29:41)
+
+  27 | std::size_t hash_combine(const T& v, const Args&... args) {
+  28 |   std::size_t seed = 0;
+> 29 |   hash_combine<T, Args...>(seed, v, args...);
+     |                                         ^ pack expansion does not contain any unexpanded parameter packs
+  30 |   return seed;
+  31 | }
+  32 | 
+
+
+❌  (ios/Pods/Headers/Private/React-graphics/react/renderer/graphics/HostPlatformColor.h:76:5)
+
+  74 |   size_t operator()(const facebook::react::Color& color) const {
+  75 |     auto seed = size_t{0};
+> 76 |     facebook::react::hash_combine(seed, color.getColor());
+     |     ^ no matching function for call to 'hash_combine'
+  77 |     return seed;
+  78 |   }
+  79 | };
+
+› Compiling react-native Pods/React-cxxreact » CxxNativeModule.cpp
+› Compiling react-native Pods/React-RuntimeHermes » HermesInstance.cpp
+› Compiling react-native Pods/React-RuntimeCore » BridgelessJSCallInvoker.cpp
+    Run script build phase '[CP-User] Generate app.config for prebuilt Constants.manifest' will be run during every build because it does not specify any outputs. To address this issue, either add output dependencies to the script phase, or configure it to run in every build by unchecking "Based on dependency analysis" in the script phase. (in target 'EXConstants' from project 'Pods')
+    Run script build phase '[CP-User] [Hermes] Replace Hermes for the right configuration, if needed' will be run during every build because it does not specify any outputs. To address this issue, either add output dependencies to the script phase, or configure it to run in every build by unchecking "Based on dependency analysis" in the script phase. (in target 'hermes-engine' from project 'Pods')
+    Run script build phase '[CP-User] [RN]Check rncore' will be run during every build because it does not specify any outputs. To address this issue, either add output dependencies to the script phase, or configure it to run in every build by unchecking "Based on dependency analysis" in the script phase. (in target 'React-Fabric' from project 'Pods')
+
+› 16 error(s), and 3 warning(s)
+
+CommandError: Failed to build iOS project. "xcodebuild" exited with error code 65.
