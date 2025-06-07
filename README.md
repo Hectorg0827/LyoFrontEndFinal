@@ -7,11 +7,11 @@ A React Native mobile application for an AI-powered learning assistant with pers
 - [Features](#features)
 - [Setup and Installation](#setup-and-installation)
 - [Running the App](#running-the-app)
+- [iOS Build Guide](#ios-build-guide)
 - [Environment Configuration](#environment-configuration)
 - [Project Structure](#project-structure)
 - [State Management](#state-management)
 - [Offline Support](#offline-support)
-- [iOS Build Issues](#ios-build-issues)
 - [Code Standards](#code-standards)
 - [Contributing](#contributing)
 
@@ -36,12 +36,14 @@ A React Native mobile application for an AI-powered learning assistant with pers
 ### Installation
 
 1. Clone the repository:
+
 ```bash
 git clone https://github.com/your-username/lyo-app.git
 cd lyo-app
 ```
 
 2. Install dependencies:
+
 ```bash
 yarn install
 # or
@@ -49,6 +51,7 @@ npm install
 ```
 
 3. Install native dependencies:
+
 ```bash
 npx pod-install
 ```
@@ -100,6 +103,51 @@ yarn build:android
 npm run build:android
 ```
 
+## iOS Build Guide
+
+To build the app for iOS devices, we've created a comprehensive guide to address common issues:
+
+### Using the Automated Build Script
+
+```bash
+# Make the script executable
+chmod +x final_ios_build.sh
+
+# Run the script
+./final_ios_build.sh
+```
+
+This script handles:
+- Cleaning the build environment
+- Installing dependencies
+- Fixing C++20 compilation issues
+- Configuring Swift module settings
+- Building the app for devices or simulator
+
+### Manual Build with Xcode
+
+```bash
+# Open the Xcode workspace
+open ios/LyoAILearningAssistant.xcworkspace
+```
+
+Then in Xcode:
+1. Select your device from the dropdown
+2. Configure code signing with your Apple ID
+3. Click Build and Run (⌘R)
+
+### Known Issues Fixed
+
+The build script addresses these known issues:
+- React Graphics C++20 concepts compilation
+- glog and other C libraries compatibility with C++20
+- Swift compilation errors
+- Code signing for resource bundles
+
+For more detailed instructions, refer to:
+- `COMPREHENSIVE_IOS_BUILD_GUIDE.md` - Complete iOS build guide
+- `BUILD_STATUS_FINAL.md` - Current build status and fixes applied
+
 ## Environment Configuration
 
 The app uses different environment configurations based on the build profile:
@@ -112,7 +160,7 @@ The app uses different environment configurations based on the build profile:
 
 Configuration is managed in `src/config/env.ts`. You can override settings in the `.env` file:
 
-```
+```env
 # .env example
 EXPO_ENV=development
 API_URL=http://localhost:8000/api/v1
@@ -121,7 +169,7 @@ USE_BACKEND_API=false
 
 ## Project Structure
 
-```
+```text
 /src
   /assets         # Images, fonts, and other static assets
   /components     # Reusable UI components
@@ -193,24 +241,6 @@ if (cachedData) {
 // Last resort: mock data
 return mockData;
 ```
-
-## iOS Build Issues
-
-If you encounter issues building the iOS app, try the provided fix script:
-
-```bash
-# Make the script executable
-chmod +x ios-build-fix.sh
-
-# Run the script
-./ios-build-fix.sh
-```
-
-Common issues this script fixes:
-- React Native bundle script issues
-- CocoaPods configuration problems
-- Xcode project settings
-- Missing permissions in Info.plist
 
 ## Code Standards
 
