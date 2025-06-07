@@ -1,3 +1,13 @@
 env: load .env.development .env
 env: export API_URL API_BASE_URL ENVIRONMENT STORAGE_PREFIX APP_ENV FEATURE_FLAGS DEBUG_MODE OPENAI_API_KEY ANALYTICS_KEY ANOTHER_VARIABLE
 - Installing CocoaPods...
+⚠️  Something went wrong running `pod install` in the `ios` directory.
+Command `pod install` failed.
+└─ Cause: Unable to find a specification for `ReactAppDependencyProvider` depended upon by `Expo`
+
+You have either:
+ * mistyped the name or version.
+ * not added the source repo that hosts the Podspec to your Podfile.
+[0m
+
+pod install --repo-update --ansi exited with non-zero code: 1
