@@ -13,10 +13,8 @@ import {
 import { LineChart, ProgressChart } from 'react-native-chart-kit';
 import { Dimensions } from 'react-native';
 
-import { AvatarPerformanceMonitor } from '../../utils/performanceMonitor';
-import { DevicePerformanceAdapter } from '../../utils/devicePerformanceAdapter';
-import { AvatarCacheManager } from '../../utils/smartCache';
 import { getSystemStatus, toggleOptimization } from '../../services/avatarSystemInit';
+import { PerformanceMetrics as SystemPerformanceMetrics } from '../../types/avatar'; // Import the correct type
 
 const screenWidth = Dimensions.get('window').width;
 
@@ -28,6 +26,23 @@ interface PerformanceData {
   timestamps: string[];
 }
 
+// Helper type to get keys of PerformanceData that map to number[]
+type NumericMetricKeys = {
+  [K in keyof PerformanceData]: PerformanceData[K] extends number[] ? K : never;
+}[keyof PerformanceData];
+
+interface SystemStatus {
+  deviceTier: string;
+  optimizationsActive: boolean;
+  performance: SystemPerformanceMetrics;
+  cache: {
+    voiceResponses?: number;
+    animations?: number;
+    userData?: number;
+  };
+  // Add other properties of systemStatus if known
+}
+
 export const AvatarPerformanceDashboard: React.FC = () => {
   const [performanceData, setPerformanceData] = useState<PerformanceData>({
     renderTime: [],
@@ -37,20 +52,22 @@ export const AvatarPerformanceDashboard: React.FC = () => {
     timestamps: [],
   });
 
-  const [systemStatus, setSystemStatus] = useState<any>(null);
+  const [systemStatus, setSystemStatus] = useState<SystemStatus | null>(null);
   const [isMonitoring, setIsMonitoring] = useState(true);
-  const [selectedMetric, setSelectedMetric] = useState<keyof PerformanceData>('renderTime');
+  const [selectedMetric, setSelectedMetric] = useState<NumericMetricKeys>('renderTime'); // Use NumericMetricKeys
 
   // Refresh interval for real-time updates
   useEffect(() => {
-    if (!isMonitoring) return;
+    if (!isMonitoring) {
+      return;
+    }
 
     const interval = setInterval(async () => {
       try {
         const status = await getSystemStatus();
-        setSystemStatus(status);
+        setSystemStatus(status as SystemStatus); // Cast to SystemStatus
 
-        const metrics = status.performance;
+        const metrics = status.performance as SystemPerformanceMetrics; // Cast to SystemPerformanceMetrics
         const now = new Date().toLocaleTimeString();
 
         setPerformanceData(prev => {
@@ -65,7 +82,8 @@ export const AvatarPerformanceDashboard: React.FC = () => {
 
           return {
             renderTime: updateArray(prev.renderTime, metrics.renderTime),
-            animationFPS: updateArray(prev.animationFPS, metrics.animationFPS),
+            // Ensure metrics.animationFPS is treated as a number, which it should be based on SystemPerformanceMetrics
+            animationFPS: updateArray(prev.animationFPS, metrics.animationFPS), 
             voiceLatency: updateArray(prev.voiceLatency, metrics.voiceLatency),
             memoryUsage: updateArray(prev.memoryUsage, metrics.memoryUsage),
             timestamps: [...prev.timestamps, now].slice(-maxDataPoints),
@@ -93,7 +111,9 @@ export const AvatarPerformanceDashboard: React.FC = () => {
 
   // Performance score calculation
   const performanceScore = useMemo(() => {
-    if (!systemStatus?.performance) return 0;
+    if (!systemStatus?.performance) {
+      return 0;
+    }
     
     const { renderTime, animationFPS, voiceLatency, memoryUsage, errorRate } = systemStatus.performance;
     
@@ -120,12 +140,14 @@ export const AvatarPerformanceDashboard: React.FC = () => {
 
   // Metric display data
   const getMetricDisplayData = () => {
-    if (performanceData[selectedMetric].length === 0) return null;
+    if (performanceData[selectedMetric].length === 0) {
+      return null;
+    }
 
     return {
       labels: performanceData.timestamps,
       datasets: [{
-        data: performanceData[selectedMetric],
+        data: performanceData[selectedMetric], // This will now correctly be number[]
         color: (opacity = 1) => `rgba(142, 84, 233, ${opacity})`,
         strokeWidth: 2,
       }],
@@ -138,7 +160,7 @@ export const AvatarPerformanceDashboard: React.FC = () => {
       await toggleOptimization(optimization as any, enabled);
       // Refresh system status
       const status = await getSystemStatus();
-      setSystemStatus(status);
+      setSystemStatus(status as SystemStatus); // Cast to SystemStatus
     } catch (error) {
       console.error('Failed to toggle optimization:', error);
     }
@@ -186,8 +208,12 @@ export const AvatarPerformanceDashboard: React.FC = () => {
               ...chartConfig,
               color: (opacity = 1) => {
                 const score = performanceScore;
-                if (score >= 80) return `rgba(0, 200, 81, ${opacity})`;
-                if (score >= 60) return `rgba(255, 136, 0, ${opacity})`;
+                if (score >= 80) {
+                  return `rgba(0, 200, 81, ${opacity})`;
+                }
+                if (score >= 60) {
+                  return `rgba(255, 136, 0, ${opacity})`;
+                }
                 return `rgba(255, 68, 68, ${opacity})`;
               },
             }}
@@ -224,14 +250,16 @@ export const AvatarPerformanceDashboard: React.FC = () => {
         
         {/* Metric Selector */}
         <View style={styles.metricSelector}>
-          {Object.keys(performanceData).filter(key => key !== 'timestamps').map((metric) => (
+          {(Object.keys(performanceData) as Array<keyof PerformanceData>)
+            .filter(key => key !== 'timestamps')
+            .map((metric) => (
             <TouchableOpacity
               key={metric}
               style={[
                 styles.metricButton,
                 selectedMetric === metric && styles.selectedMetricButton,
               ]}
-              onPress={() => setSelectedMetric(metric as keyof PerformanceData)}
+              onPress={() => setSelectedMetric(metric as NumericMetricKeys)} // Ensure metric is cast to NumericMetricKeys
             >
               <Text style={[
                 styles.metricButtonText,
@@ -246,7 +274,7 @@ export const AvatarPerformanceDashboard: React.FC = () => {
         {/* Chart */}
         {chartData && (
           <LineChart
-            data={chartData}
+            data={chartData} // This should now be correctly typed
             width={screenWidth - 40}
             height={220}
             chartConfig={chartConfig}
@@ -292,13 +320,13 @@ export const AvatarPerformanceDashboard: React.FC = () => {
         <Text style={styles.cardTitle}>Cache Statistics</Text>
         <View style={styles.cacheStats}>
           <Text style={styles.cacheItem}>
-            Voice Responses: {systemStatus.cache.voiceResponses || 0} cached
+            Voice Responses: {systemStatus.cache?.voiceResponses || 0} cached
           </Text>
           <Text style={styles.cacheItem}>
-            Animations: {systemStatus.cache.animations || 0} cached
+            Animations: {systemStatus.cache?.animations || 0} cached
           </Text>
           <Text style={styles.cacheItem}>
-            User Data: {systemStatus.cache.userData || 0} entries
+            User Data: {systemStatus.cache?.userData || 0} entries
           </Text>
         </View>
       </View>
@@ -310,7 +338,7 @@ export const AvatarPerformanceDashboard: React.FC = () => {
           <View style={styles.controlItem}>
             <Text style={styles.controlLabel}>Performance Monitoring</Text>
             <Switch
-              value={true} // Would be connected to actual state
+              value={systemStatus.optimizationsActive} // Example: connect to actual optimization state
               onValueChange={(value) => handleOptimizationToggle('enablePerformanceMonitoring', value)}
               trackColor={{ false: '#3e3e3e', true: '#8E54E9' }}
               thumbColor="#f4f3f4"
@@ -319,7 +347,7 @@ export const AvatarPerformanceDashboard: React.FC = () => {
           <View style={styles.controlItem}>
             <Text style={styles.controlLabel}>Adaptive Quality</Text>
             <Switch
-              value={true} // Would be connected to actual state
+              value={systemStatus.optimizationsActive} // Example: connect to actual optimization state
               onValueChange={(value) => handleOptimizationToggle('enableAdaptiveQuality', value)}
               trackColor={{ false: '#3e3e3e', true: '#8E54E9' }}
               thumbColor="#f4f3f4"
@@ -328,7 +356,7 @@ export const AvatarPerformanceDashboard: React.FC = () => {
           <View style={styles.controlItem}>
             <Text style={styles.controlLabel}>Smart Caching</Text>
             <Switch
-              value={true} // Would be connected to actual state
+              value={systemStatus.optimizationsActive} // Example: connect to actual optimization state
               onValueChange={(value) => handleOptimizationToggle('enableSmartCaching', value)}
               trackColor={{ false: '#3e3e3e', true: '#8E54E9' }}
               thumbColor="#f4f3f4"
@@ -353,15 +381,17 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     color: '#FFFFFF',
-    fontSize: 16,
+    fontSize: 18,
   },
   header: {
+    padding: 20,
+    paddingTop: 40, // Adjust for status bar
+    backgroundColor: '#1F1F1F',
+    borderBottomWidth: 1,
+    borderBottomColor: '#333',
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#333',
   },
   title: {
     color: '#FFFFFF',
@@ -374,7 +404,7 @@ const styles = StyleSheet.create({
   toggleLabel: {
     color: '#AAAAAA',
     fontSize: 12,
-    marginBottom: 5,
+    marginBottom: 4,
   },
   scoreCard: {
     backgroundColor: '#1F1F1F',
@@ -391,13 +421,16 @@ const styles = StyleSheet.create({
   },
   scoreContainer: {
     alignItems: 'center',
-    justifyContent: 'center',
+    position: 'relative',
   },
   scoreValue: {
-    position: 'absolute',
     color: '#FFFFFF',
-    fontSize: 24,
+    fontSize: 28,
     fontWeight: 'bold',
+    position: 'absolute',
+    top: '50%',
+    left: '50%',
+    transform: [{ translateX: -20 }, { translateY: -18 }], // Adjust to center
   },
   deviceCard: {
     backgroundColor: '#1F1F1F',
@@ -445,6 +478,7 @@ const styles = StyleSheet.create({
   metricSelector: {
     flexDirection: 'row',
     flexWrap: 'wrap',
+    justifyContent: 'center',
     marginBottom: 15,
   },
   metricButton: {
@@ -529,4 +563,6 @@ const styles = StyleSheet.create({
   },
 });
 
+// Removed unused imports AvatarPerformanceMonitor, DevicePerformanceAdapter, AvatarCacheManager as they were not used in the component logic.
+// If they are intended for future use or were mistakenly removed, they can be re-added.
 export default AvatarPerformanceDashboard;
