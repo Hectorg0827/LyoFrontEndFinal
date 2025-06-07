@@ -9,26 +9,31 @@ import * as SplashScreen from "expo-splash-screen";
 import React, { useEffect, useState } from "react";
 import { Platform, StyleSheet, TouchableOpacity } from "react-native";
 
-import AIClassroomScreen from "../screens/AIClassroomScreen";
-import AccessibilitySettingsScreen from "../screens/AccessibilitySettingsScreen";
-import AuthScreen from "../screens/AuthScreen";
-import AvatarSettingsScreen from "../screens/AvatarSettingsScreen";
-import BookshelfScreen from "../screens/BookshelfScreen";
-import CommunityScreen from "../screens/CommunityScreen";
-import HomeScreen from "../screens/HomeScreen";
-import LearnScreen from "../screens/LearnScreen";
-import NotificationsScreen from "../screens/NotificationsScreen";
-import ProfileScreen from "../screens/ProfileScreen";
-import SearchScreen from "../screens/SearchScreen";
-import OnboardingScreen from "../screens/OnboardingScreen";
-import SettingsScreen from "../screens/SettingsScreen";
-import PrivacyPolicyScreen from "../screens/PrivacyPolicyScreen";
-import TermsOfServiceScreen from "../screens/TermsOfServiceScreen";
-import NotificationPreferencesScreen from "../screens/NotificationPreferencesScreen";
-import AvatarPerformanceDashboard from "../components/Avatar/AvatarPerformanceDashboard";
-import AvatarOptimizationTest from "../components/Avatar/AvatarOptimizationTest";
-import { useAppStore } from "../store/appStore";
-import { useAuthStore } from "../store/authStore";
+import AIClassroomScreen from "@screens/AIClassroomScreen";
+import EnhancedAIClassroomScreen from "@screens/EnhancedAIClassroomScreen";
+import AdaptiveLearningDemoScreen from "@screens/AdaptiveLearningDemoScreen";
+import AccessibilitySettingsScreen from "@screens/AccessibilitySettingsScreen";
+import AuthScreen from "@screens/AuthScreen";
+import AvatarSettingsScreen from "@screens/AvatarSettingsScreen";
+import BookshelfScreen from "@screens/BookshelfScreen";
+import CommunityScreen from "@screens/CommunityScreen";
+import HomeScreen from "@screens/HomeScreen";
+import LearnScreen from "@screens/LearnScreen";
+import EnhancedLearnScreen from "@screens/EnhancedLearnScreen";
+import NotificationsScreen from "@screens/NotificationsScreen";
+import ProfileScreen from "@screens/ProfileScreen";
+import SearchScreen from "@screens/SearchScreen";
+import OnboardingScreen from "@screens/OnboardingScreen";
+import SettingsScreen from "@screens/SettingsScreen";
+import PrivacyPolicyScreen from "@screens/PrivacyPolicyScreen";
+import TermsOfServiceScreen from "@screens/TermsOfServiceScreen";
+import NotificationPreferencesScreen from "@screens/NotificationPreferencesScreen";
+import AvatarPerformanceDashboard from "@components/Avatar/AvatarPerformanceDashboard";
+import EnhancedAvatarPerformanceDashboard from "@components/Avatar/EnhancedAvatarPerformanceDashboard";
+import AvatarOptimizationTest from "@components/Avatar/AvatarOptimizationTest";
+import { useAppStore } from "@store/appStore";
+import { apiMiddleware } from "@services/apiMiddleware";
+import { ErrorHandler, ErrorType } from "../utils/errorHandler";
 
 import linking from "./linking";
 
@@ -61,7 +66,7 @@ const MainNavigator = () => {
           <BlurView intensity={100} style={StyleSheet.absoluteFill} />
         ),
         tabBarIcon: ({ focused, color, size }) => {
-          let iconName;
+          let iconName: keyof typeof Ionicons.glyphMap;
 
           switch (route.name) {
             case "Home":
@@ -96,7 +101,7 @@ const MainNavigator = () => {
       {/* Custom Learn button in the middle */}
       <Tab.Screen
         name="Learn"
-        component={LearnScreen}
+        component={EnhancedLearnScreen}
         options={({ navigation }) => ({
           tabBarButton: () => (
             <LearnButton onPress={() => navigation.navigate("Learn")} />
@@ -112,11 +117,15 @@ const MainNavigator = () => {
 
 const AppNavigator: React.FC = () => {
   // Get authentication state from the auth store
-  const { isAuthenticated, checkAuth } = useAuthStore();
+  const { isAuthenticated } = useAppStore();
   
   // Get app state from the app store
   const isOnboardingCompleted = useAppStore(
     (state) => state.isOnboardingCompleted,
+  );
+  
+  const setOnboardingCompleted = useAppStore(
+    (state) => state.setOnboardingCompleted
   );
   
   const [isAppReady, setIsAppReady] = useState(false);
@@ -129,33 +138,42 @@ const AppNavigator: React.FC = () => {
         await SplashScreen.preventAutoHideAsync();
 
         // Check if onboarding is completed
-        const onboardingCompleted = await AsyncStorage.getItem(
-          "@onboarding_completed",
-        );
-        const appStore = useAppStore.getState();
-
-        if (onboardingCompleted === "true") {
-          appStore.setOnboardingCompleted(true);
+        try {
+          const onboardingCompleted = await AsyncStorage.getItem("@onboardingCompleted");
+          if (onboardingCompleted === "true") {
+            setOnboardingCompleted(true);
+          }
+        } catch (error) {
+          const appError = ErrorHandler.processError(error, "AppNavigator.checkOnboarding");
+          console.warn("Error checking onboarding status:", appError.message);
         }
         
         // Check if user is authenticated
-        await checkAuth();
-
-        // Initialize analytics, notifications, and performance monitoring
-        // In a real implementation, these would be calls to the respective services
+        try {
+          await apiMiddleware.init();
+        } catch (error) {
+          const appError = ErrorHandler.processError(error, "AppNavigator.apiMiddleware.init");
+          console.warn("Error initializing API middleware:", appError.message);
+        }
 
         // Wait a bit to ensure smooth transition
         await new Promise((resolve) => setTimeout(resolve, 1000));
       } catch (e) {
-        console.warn("Error preparing app:", e);
+        const appError = ErrorHandler.processError(e, "AppNavigator.prepare");
+        console.warn("Error preparing app:", appError.message);
       } finally {
         setIsAppReady(true);
-        await SplashScreen.hideAsync();
+        try {
+          await SplashScreen.hideAsync();
+        } catch (error) {
+          const appError = ErrorHandler.processError(error, "AppNavigator.hideAsync");
+          console.warn("Error hiding splash screen:", appError.message);
+        }
       }
     }
 
     prepare();
-  }, [checkAuth]);
+  }, [setOnboardingCompleted]);
 
   // Until the app is ready, return null (splash screen will be visible)
   if (!isAppReady) {
@@ -186,6 +204,8 @@ const AppNavigator: React.FC = () => {
             />
             <Stack.Screen name="Bookshelf" component={BookshelfScreen} />
             <Stack.Screen name="AIClassroom" component={AIClassroomScreen} />
+            <Stack.Screen name="EnhancedAIClassroom" component={EnhancedAIClassroomScreen} />
+            <Stack.Screen name="AdaptiveLearningDemo" component={AdaptiveLearningDemoScreen} />
             <Stack.Screen
               name="AvatarSettings"
               component={AvatarSettingsScreen}
@@ -204,6 +224,10 @@ const AppNavigator: React.FC = () => {
             <Stack.Screen
               name="AvatarPerformanceDashboard"
               component={AvatarPerformanceDashboard}
+            />
+            <Stack.Screen
+              name="EnhancedAvatarPerformanceDashboard"
+              component={EnhancedAvatarPerformanceDashboard}
             />
             <Stack.Screen
               name="AvatarOptimizationTest"
