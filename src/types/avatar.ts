@@ -249,3 +249,71 @@ export interface MemoryMetrics {
   listenerCount: number;
   cacheSize: number;
 }
+
+// Enhanced avatar emotion types
+export type AvatarEmotion = 'neutral' | 'happy' | 'sad' | 'angry' | 'surprised' | 'confused' | 'thinking' | 'excited';
+export type EmotionIntensity = 'low' | 'medium' | 'high';
+
+// Avatar expression configuration
+export interface AvatarExpression {
+  name: AvatarEmotion;
+  intensity: number;
+  duration: number;
+  transitionTime: number;
+  affectsVoice: boolean;
+  dominance: number;
+}
+
+// Viseme data for lip sync
+export interface VisemeData {
+  viseme: string;
+  startTime: number;
+  endTime: number;
+  weight: number;
+}
+
+// Enhanced avatar context type with emotion and viseme support
+export interface EnhancedAvatarContextType extends AvatarContextType {
+  // Emotion methods
+  currentEmotion: AvatarEmotion;
+  setEmotion: (emotion: AvatarEmotion, intensity?: number) => Promise<void>;
+  getEmotionExpression: (emotion: AvatarEmotion) => AvatarExpression;
+  
+  // Enhanced TTS with visemes
+  speakWithVisemes: (
+    text: string, 
+    options?: {
+      onStart?: () => void,
+      onViseme?: (viseme: string, time: number) => void,
+      onEmotion?: (emotion: AvatarEmotion, intensity: number) => void,
+      onProgress?: (progress: number) => void,
+      onDone?: () => void
+    }
+  ) => Promise<void>;
+  
+  // Learning patterns and personalization
+  getLearningRecommendations: () => Promise<{
+    subject: string,
+    level: string,
+    reason: string
+  }[]>;
+  
+  // Performance monitoring
+  getPerformanceReport: () => string;
+  
+  // Enhanced speech recognition
+  enhancedVoiceRecognition: () => Promise<{
+    transcription: string,
+    confidence: number,
+    emotions: { emotion: AvatarEmotion, score: number }[]
+  }>;
+}
+
+// User interaction record
+export interface InteractionRecord {
+  userInput: string;
+  response: string;
+  emotion: AvatarEmotion;
+  timestamp: number;
+  duration: number;
+}
