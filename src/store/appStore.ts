@@ -1,6 +1,10 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
+import { ErrorHandler, ErrorType } from "../utils/errorHandler";
+import ENV from "../config/env";
+import apiService from "../services/apiService";
+import { apiMiddleware } from "../services/apiMiddleware";
 
 interface UserPreferences {
   notificationsEnabled: boolean;
@@ -11,36 +15,45 @@ interface UserPreferences {
   dataSaverMode: boolean;
 }
 
+// User authentication interface - matches API response
 interface User {
   id: string;
+  email: string;
   name: string;
-  avatar: string; // URL or local identifier
-  email?: string;
-  preferences: UserPreferences; // User-specific preferences, MUST exist for a logged-in user
+  avatar?: string;
 }
 
 interface AppState {
-  user: User | null;
-  isAuthenticated: boolean;
+  // App settings
   isOnboardingCompleted: boolean;
   appVersion: string;
-  currentLanguage: string; // This might be redundant if always derived from user.preferences.preferredLanguage
+  currentLanguage: string;
   analyticsEnabled: boolean;
   lastBackupDate: string | null;
+  userPreferences: UserPreferences;
+
+  // Authentication state
+  isAuthenticated: boolean;
+  user: User | null;
+  isLoading: boolean;
+  error: string | null;
 
   // Actions
-  setUser: (user: User | null) => void;
-  setAuthenticated: (status: boolean) => void;
-  login: (userData: User) => void;
-  logout: () => void;
-  // setAuthenticated: (status: boolean) => void; // Covered by setUser and logout
   setOnboardingCompleted: (status: boolean) => void;
   setAnalyticsEnabled: (enabled: boolean) => void;
-  // setCurrentLanguage: (language: string) => void; // Should be part of updateUserPreferences
   updateUserPreferences: (preferences: Partial<UserPreferences>) => void;
   setLastBackupDate: (date: string | null) => void;
-  // Internal action for rehydration if needed, though persist handles much of this
-  // _rehydrateExtras: () => Promise<void>;
+  setCurrentLanguage: (language: string) => void;
+
+  // Authentication actions
+  setUser: (user: User | null) => void;
+  setAuthenticated: (status: boolean) => void;
+  login: (email: string, password: string) => Promise<boolean>;
+  register: (email: string, password: string, name: string) => Promise<boolean>;
+  logout: () => Promise<void>;
+  resetPassword: (email: string) => Promise<boolean>;
+  setError: (error: string | null) => void;
+  clearError: () => void;
 }
 
 const defaultUserPreferences: UserPreferences = {
@@ -55,131 +68,196 @@ const defaultUserPreferences: UserPreferences = {
 export const useAppStore = create<AppState>()(
   persist(
     (set, get) => ({
-      user: null,
-      isAuthenticated: false,
+      // App settings
       isOnboardingCompleted: false,
       appVersion: "1.0.2", // Increment or fetch dynamically
-      currentLanguage: defaultUserPreferences.preferredLanguage, // Initialize from default
+      currentLanguage: defaultUserPreferences.preferredLanguage,
       analyticsEnabled: true,
       lastBackupDate: null,
+      userPreferences: defaultUserPreferences,
 
-      setUser: (user) => {
-        set({
-          user,
-          isAuthenticated: !!user,
-          currentLanguage:
-            user?.preferences?.preferredLanguage || get().currentLanguage,
-        });
-      },
-
-      setAuthenticated: (status) => {
-        set({ isAuthenticated: status });
-      },
-
-      login: (userData) => {
-        // Ensure userData always has a preferences object
-        const userWithPrefs: User = {
-          ...userData,
-          preferences: {
-            ...defaultUserPreferences, // Start with defaults
-            ...(userData.preferences || {}), // Override with any provided prefs
-          },
-        };
-        set({
-          user: userWithPrefs,
-          isAuthenticated: true,
-          currentLanguage: userWithPrefs.preferences.preferredLanguage,
-        });
-        // Persist theme immediately if it's a critical UI element
-        AsyncStorage.setItem("@appTheme", userWithPrefs.preferences.appTheme);
-      },
-
-      logout: () => {
-        set({
-          user: null,
-          isAuthenticated: false,
-          currentLanguage: defaultUserPreferences.preferredLanguage, // Reset to default
-        });
-        AsyncStorage.removeItem("@userToken"); // Example: clear token
-        AsyncStorage.removeItem("@appTheme"); // Clear theme preference
-      },
+      // Authentication state
+      isAuthenticated: false,
+      user: null,
+      isLoading: false,
+      error: null,
 
       setOnboardingCompleted: (status) => {
         set({ isOnboardingCompleted: status });
-        // AsyncStorage.setItem('@onboardingCompleted', status.toString()); // Persist handles this if in partialize
+        
+        // Also store in AsyncStorage directly for access during app initialization
+        try {
+          AsyncStorage.setItem('@onboardingCompleted', status.toString());
+        } catch (error) {
+          ErrorHandler.processError(error, "appStore.setOnboardingCompleted");
+        }
       },
 
       setAnalyticsEnabled: (enabled) => {
         set({ analyticsEnabled: enabled });
-        // AsyncStorage.setItem('@analyticsEnabled', enabled.toString()); // Persist handles this
+      },
+      
+      setCurrentLanguage: (language) => {
+        set({ currentLanguage: language });
+        
+        // Update preferences too to keep in sync
+        const currentPrefs = get().userPreferences;
+        if (currentPrefs.preferredLanguage !== language) {
+          set({
+            userPreferences: {
+              ...currentPrefs,
+              preferredLanguage: language
+            }
+          });
+        }
+        
+        // Store in AsyncStorage for quick access
+        try {
+          AsyncStorage.setItem("@currentLanguage", language);
+        } catch (error) {
+          ErrorHandler.processError(error, "appStore.setCurrentLanguage");
+        }
       },
 
       updateUserPreferences: (newPrefs) =>
         set((state) => {
-          if (state.user) {
-            const updatedPreferences: UserPreferences = {
-              ...state.user.preferences,
-              ...newPrefs,
-            };
-            // If theme or language changes, update AsyncStorage for immediate non-store access if needed
+          const updatedPreferences = {
+            ...state.userPreferences,
+            ...newPrefs,
+          };
+          
+          // If theme or language changes, update AsyncStorage for immediate access
+          try {
             if (newPrefs.appTheme) {
               AsyncStorage.setItem("@appTheme", newPrefs.appTheme);
             }
+            
             if (newPrefs.preferredLanguage) {
-              AsyncStorage.setItem(
-                "@currentLanguage",
-                newPrefs.preferredLanguage,
-              );
+              AsyncStorage.setItem("@currentLanguage", newPrefs.preferredLanguage);
+              
+              // Also update currentLanguage state
+              set({ currentLanguage: newPrefs.preferredLanguage });
             }
-            return {
-              user: { ...state.user, preferences: updatedPreferences },
-              currentLanguage:
-                updatedPreferences.preferredLanguage || state.currentLanguage,
-            };
+          } catch (error) {
+            ErrorHandler.processError(error, "appStore.updateUserPreferences");
           }
-          return {}; // No change if no user
+          
+          return {
+            userPreferences: updatedPreferences,
+          };
         }),
 
       setLastBackupDate: (date) => set({ lastBackupDate: date }),
+
+      // Authentication actions
+      setUser: (user) => set({ user, isAuthenticated: !!user }),
+      setAuthenticated: (status) => set({ isAuthenticated: status }),
+      setError: (error) => set({ error }),
+      clearError: () => set({ error: null }),
+
+      // Login action
+      login: async (email, password) => {
+        set({ isLoading: true, error: null });
+        try {
+          const response = await apiService.login({ email, password });
+          
+          // Store auth token via apiMiddleware
+          await apiMiddleware.handleAuthSuccess(response.token, response.user);
+          
+          set({ isLoading: false, isAuthenticated: true, user: response.user });
+          return true;
+        } catch (error) {
+          const appError = ErrorHandler.processError(error, "appStore.login");
+          set({ isLoading: false, error: appError.message });
+          return false;
+        }
+      },
+
+      // Register action
+      register: async (email, password, name) => {
+        set({ isLoading: true, error: null });
+        try {
+          const response = await apiService.register({ email, password, name });
+          
+          // Store auth token via apiMiddleware
+          await apiMiddleware.handleAuthSuccess(response.token, response.user);
+          
+          set({ isLoading: false, isAuthenticated: true, user: response.user });
+          return true;
+        } catch (error) {
+          const appError = ErrorHandler.processError(error, "appStore.register");
+          set({ isLoading: false, error: appError.message });
+          return false;
+        }
+      },
+
+      // Logout action
+      logout: async () => {
+        set({ isLoading: true });
+        try {
+          await apiMiddleware.handleLogout();
+          
+          set({ 
+            isLoading: false, 
+            isAuthenticated: false, 
+            user: null, 
+            error: null 
+          });
+        } catch (error) {
+          const appError = ErrorHandler.processError(error, "appStore.logout");
+          set({ isLoading: false, error: appError.message });
+        }
+      },
+
+      // Reset password action
+      resetPassword: async (email) => {
+        set({ isLoading: true, error: null });
+        try {
+          // For now, just simulate success - implement actual API call later
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          set({ isLoading: false });
+          return true;
+        } catch (error) {
+          const appError = ErrorHandler.processError(error, "appStore.resetPassword");
+          set({ isLoading: false, error: appError.message });
+          return false;
+        }
+      },
     }),
     {
-      name: "lyo-app-storage", // Unique name for AsyncStorage item
+      name: "lyo-app-storage",
       storage: createJSONStorage(() => AsyncStorage),
       partialize: (state) => ({
         // Only persist what's necessary and safe
-        user: state.user, // User object (includes their preferences)
-        isAuthenticated: state.isAuthenticated,
         isOnboardingCompleted: state.isOnboardingCompleted,
-        currentLanguage: state.currentLanguage, // Persisted for quick access before full user object hydration
+        currentLanguage: state.currentLanguage,
         analyticsEnabled: state.analyticsEnabled,
-        appVersion: state.appVersion, // Good to persist if it influences compatibility
+        appVersion: state.appVersion,
         lastBackupDate: state.lastBackupDate,
+        userPreferences: state.userPreferences,
+        // Note: We don't persist authentication state here - handled by apiMiddleware
       }),
       onRehydrateStorage: () => {
         return (state, error) => {
           if (error) {
-            console.error(
-              "Zustand persist: An error occurred during hydration:",
-              error,
+            const appError = ErrorHandler.processError(
+              error, 
+              "appStore.onRehydrateStorage"
             );
+            console.error("Zustand persist: Hydration error:", appError.message);
           } else {
             console.log("Zustand persist: Hydration finished.");
-            // Post-hydration logic can go here if needed
-            // For example, ensuring the currentLanguage in state matches the user's preference
-            if (
-              state?.user?.preferences?.preferredLanguage &&
-              state.currentLanguage !== state.user.preferences.preferredLanguage
-            ) {
-              useAppStore.setState({
-                currentLanguage: state.user.preferences.preferredLanguage,
-              });
-            }
-            // Similarly, ensure app theme from user preferences is applied if needed by other systems
-            if (state?.user?.preferences?.appTheme) {
-              AsyncStorage.setItem(
-                "@appTheme",
-                state.user.preferences.appTheme,
-              );
+            
+            // Apply app theme from user preferences if available
+            try {
+              if (state?.userPreferences?.appTheme) {
+                AsyncStorage.setItem(
+                  "@appTheme",
+                  state.userPreferences.appTheme,
+                );
+              }
+            } catch (storageError) {
+              ErrorHandler.processError(storageError, "appStore.applyThemeAfterHydration");
             }
           }
         };
@@ -187,13 +265,5 @@ export const useAppStore = create<AppState>()(
     },
   ),
 );
-
-// Optional: Function to initialize or check things after store is ready
-// (though onRehydrateStorage is often sufficient)
-// const initializeStore = async () => {
-//   const state = useAppStore.getState();
-//   // Example: if onboarding not completed and no user, navigate to onboarding
-// };
-// initializeStore();
 
 export default useAppStore;
