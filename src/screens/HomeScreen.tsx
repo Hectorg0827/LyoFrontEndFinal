@@ -58,7 +58,7 @@ const PostItem = ({ post }: { post: Post }) => (
 );
 
 export const HomeScreen: React.FC = () => {
-  const _navigation =
+  const navigation =
     useNavigation<NativeStackNavigationProp<MainTabParamList>>();
 
   const {
@@ -217,6 +217,14 @@ export const HomeScreen: React.FC = () => {
               </View>
             )}
             <Text style={styles.sectionTitle}>Feed</Text>
+            
+            {/* Enhanced AI Classroom Demo Button */}
+            <TouchableOpacity 
+              style={styles.enhancedAIButton}
+              onPress={() => navigation.navigate('EnhancedAIClassroom')}
+            >
+              <Text style={styles.enhancedAIButtonText}>Try Enhanced AI Avatar</Text>
+            </TouchableOpacity>
           </>
         }
         data={posts}
@@ -334,6 +342,23 @@ const styles = StyleSheet.create({
   },
   feedListContent: {
     paddingBottom: 20, // Reverted: paddingBlockEnd
+  },
+  enhancedAIButton: {
+    backgroundColor: '#8E54E9',
+    margin: 15,
+    padding: 15,
+    borderRadius: 10,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  enhancedAIButtonText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 16,
   },
 });
 
