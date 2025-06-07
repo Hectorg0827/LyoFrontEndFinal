@@ -7,7 +7,7 @@ import { RootStackParamList } from "./types";
 const scheme = "lyoapp";
 
 // Define your URL mapping structure
-const linking: LinkingOptions<RootStackParamList> = {
+const linking: LinkingOptions<any> = {
   prefixes: [
     /* Prefix for app links/universal links */
     Linking.createURL("/"),
@@ -57,6 +57,8 @@ const linking: LinkingOptions<RootStackParamList> = {
               CourseDetail: "course/:courseId",
               Module: "course/:courseId/module/:moduleId",
               AIClassroom: "ai-classroom",
+              EnhancedAIClassroom: "enhanced-ai-classroom",
+              AdaptiveLearningDemo: "adaptive-learning-demo",
             },
           },
 
@@ -109,8 +111,11 @@ const linking: LinkingOptions<RootStackParamList> = {
       Notifications: "notifications",
       Bookshelf: "bookshelf",
       AIClassroom: "ai-classroom",
+      EnhancedAIClassroom: "enhanced-ai-classroom",
+      AdaptiveLearningDemo: "adaptive-learning-demo",
       AvatarSettings: "avatar-settings",
       Onboarding: "onboarding",
+      EnhancedAvatarPerformanceDashboard: "enhanced-avatar-performance-dashboard",
 
       // Special screens
       NotFound: "*",
