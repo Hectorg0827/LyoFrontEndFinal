@@ -1,0 +1,44 @@
+env: load .env.development .env
+env: export API_URL API_BASE_URL ENVIRONMENT STORAGE_PREFIX APP_ENV FEATURE_FLAGS DEBUG_MODE OPENAI_API_KEY ANALYTICS_KEY ANOTHER_VARIABLE
+- Installing CocoaPods...
+⚠️  Something went wrong running `pod install` in the `ios` directory.
+Command `pod install` failed.
+└─ Cause: Invalid `Podfile` file: syntax errors found
+  145 |             ]
+  146 |             
+> 147 | ... def|
+      |     ^ expected the block parameters to end with `|`
+> 148 | ... .include?(def)
+      |     ^ unexpected '.', ignoring it
+      |     ^ expected a delimiter to close the parameters
+      |                  ^ unexpected ')', ignoring it
+      |                  ^ expected a delimiter to close the parameters
+      |                  ^ unexpected ')'; expected a method name
+  149 |             end
+  150 |             
+> 151 |             config.build_settings['GCC_PREPROCES ...
+      |             ^~~~~~ unexpected local variable or method, expecting end-of-input
+      |             ^~~~~~ unexpected local variable or method; expected a `)` to close the arguments
+  152 |           end
+  153 |         end
+  ~~~~~~~
+  182 |     end
+  183 |   end
+> 184 | end
+      |    ^ unexpected end-of-input, assuming it is closing the parent top level context
+> 185 | 
+      | ^ expected a block beginning with `do` to end with `end`
+
+      | ^ expected a block beginning with `do` to end with `end`
+
+      | ^ expected a block beginning with `do` to end with `end`
+.
+[0m
+ #  from /Users/republicalatuya/Desktop/LyoFrontEndFinal/ios/Podfile:147
+ #  -------------------------------------------
+ #              
+ >              folly_defs.each do |def|
+ #                defs << def unless defs.include?(def)
+ #  -------------------------------------------
+
+pod install --repo-update --ansi exited with non-zero code: 1
