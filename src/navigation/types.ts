@@ -8,7 +8,11 @@ export interface RootStackParamList {
   Main: NavigatorScreenParams<MainTabParamList>;
   // Avatar optimization screens
   AvatarPerformanceDashboard: undefined;
+  EnhancedAvatarPerformanceDashboard: undefined;
   AvatarOptimizationTest: undefined;
+  // Enhanced screens
+  EnhancedAIClassroom: undefined;
+  AdaptiveLearningDemo: undefined;
   // Add other modal screens or full-screen screens here
   [key: string]: any; // Index signature for ParamListBase compatibility
 }
@@ -36,7 +40,11 @@ export interface HomeStackParamList {
 // Learn stack screens
 export interface LearnStackParamList {
   LearnScreen: undefined;
+  EnhancedLearnScreen: undefined;
   Bookshelf: undefined;
+  AIClassroom: undefined;
+  EnhancedAIClassroom: undefined;
+  AdaptiveLearningDemo: undefined;
   // Add other nested screens in the Learn stack
   [key: string]: any; // Index signature for ParamListBase compatibility
 }
@@ -58,6 +66,9 @@ export interface HomeScreenProps
 
 export interface LearnScreenProps
   extends NativeStackScreenProps<LearnStackParamList, "LearnScreen"> {}
+  
+export interface EnhancedLearnScreenProps
+  extends NativeStackScreenProps<LearnStackParamList, "EnhancedLearnScreen"> {}
 
 export interface BookshelfScreenProps
   extends NativeStackScreenProps<LearnStackParamList, "Bookshelf"> {}
@@ -83,5 +94,14 @@ export interface SearchScreenProps
 export interface AvatarPerformanceDashboardProps
   extends NativeStackScreenProps<RootStackParamList, "AvatarPerformanceDashboard"> {}
 
+export interface EnhancedAvatarPerformanceDashboardProps
+  extends NativeStackScreenProps<RootStackParamList, "EnhancedAvatarPerformanceDashboard"> {}
+
 export interface AvatarOptimizationTestProps
   extends NativeStackScreenProps<RootStackParamList, "AvatarOptimizationTest"> {}
+
+export interface EnhancedAIClassroomScreenProps
+  extends NativeStackScreenProps<RootStackParamList, "EnhancedAIClassroom"> {}
+
+export interface AdaptiveLearningDemoScreenProps
+  extends NativeStackScreenProps<RootStackParamList, "AdaptiveLearningDemo"> {}
