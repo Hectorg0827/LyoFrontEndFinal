@@ -25,9 +25,12 @@ import * as Location from 'expo-location';
 
 import { communityService, Event, Community } from "../services/communityService";
 
+// Define pin types as a union type to ensure type safety
+type PinType = "event" | "library" | "study-group" | "club" | "online-session";
+
 interface MapPin {
   id: string;
-  type: "event" | "library" | "study-group" | "club" | "online-session";
+  type: PinType;
   title: string;
   description: string;
   coordinate: {
@@ -78,7 +81,7 @@ const CommunityScreen: React.FC = () => {
         }
         
         const location = await Location.getCurrentPositionAsync({
-          accuracy: Location.Accuracy.Balanced
+          accuracy: 3 // Balanced accuracy (enum value)
         });
         
         setLocation({
@@ -148,11 +151,13 @@ const CommunityScreen: React.FC = () => {
   
   // Convert events to map pins
   const mapPins = React.useMemo(() => {
-    if (!events) return [];
+    if (!events) {
+      return [];
+    }
     
     return events.map(event => ({
       id: event.id,
-      type: "event" as const,
+      type: "event" as PinType,
       title: event.title,
       description: event.description,
       coordinate: {
@@ -191,7 +196,9 @@ const CommunityScreen: React.FC = () => {
   
   // Format events for the list
   const nearbyEvents = React.useMemo(() => {
-    if (!events) return [];
+    if (!events) {
+      return [];
+    }
     
     return events.map(event => ({
       id: event.id,
@@ -420,7 +427,7 @@ const CommunityScreen: React.FC = () => {
   if (locationPermissionDenied) {
     return (
       <View style={styles.errorContainer}>
-        <Ionicons name="location-off" size={64} color="#e74c3c" />
+        <Ionicons name="navigate-circle-outline" size={64} color="#e74c3c" />
         <Text style={styles.errorTitle}>Location Access Required</Text>
         <Text style={styles.errorMessage}>
           We need location permission to show you nearby events and communities.
