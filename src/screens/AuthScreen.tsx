@@ -17,7 +17,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { useAuthStore } from "../store/authStore";
+import { useAppStore } from "../store/appStore";
 
 // Define the sign in methods
 type SignInMethod = "email" | "google" | "apple" | "facebook";
@@ -30,15 +30,15 @@ const AuthScreen: React.FC = () => {
   const [passwordVisible, setPasswordVisible] = useState(false);
   
   // Use auth store for authentication state
-  const { 
-    login, 
-    register, 
+  const {
+    login,
+    register,
     resetPassword,
     isLoading, 
     error, 
     clearError, 
     setError: setAuthError 
-  } = useAuthStore();
+  } = useAppStore();
 
   // Handle authentication with different methods
   const handleAuth = async (method: SignInMethod) => {
