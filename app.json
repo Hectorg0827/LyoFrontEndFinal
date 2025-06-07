@@ -3,14 +3,13 @@
     "name": "Lyo - AI Learning Assistant",
     "slug": "lyo-app",
     "version": "1.0.0",
-    "sdkVersion": "51.0.0",
     "orientation": "portrait",
-    "icon": "./assets/notification-icon.png",
+    "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
     "splash": {
       "image": "./assets/splash.png",
       "resizeMode": "contain",
-      "backgroundColor": "#121212"
+      "backgroundColor": "#ffffff"
     },
     "assetBundlePatterns": [
       "**/*"
@@ -18,44 +17,23 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.lyo.LyoAILearningAssistant",
-      "buildNumber": "1.0.0",
-      "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false,
-        "NSMicrophoneUsageDescription": "This app uses the microphone to record your voice for the AI assistant interaction.",
-        "NSCameraUsageDescription": "This app uses the camera for profile pictures and scanning learning materials.",
-        "NSPhotoLibraryUsageDescription": "This app uses your photo library for selecting profile pictures and sharing learning content.",
-        "NSLocationWhenInUseUsageDescription": "This app uses your location to find nearby learning communities and events."
-      }
+      "deploymentTarget": "15.1"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#121212"
+        "backgroundColor": "#ffffff"
       },
-      "package": "com.lyo.app",
-      "permissions": [
-        "RECORD_AUDIO",
-        "CAMERA",
-        "ACCESS_FINE_LOCATION"
-      ]
+      "package": "com.lyo.app"
     },
     "web": {
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      "expo-notifications",
-      "expo-localization", 
-      "sentry-expo",
-      "expo-asset"
+      "expo-font"
     ],
-    "updates": {
-      "enabled": false
-    },
-    "scheme": "lyoapp",
-    "extra": {
-      "eas": {
-        "projectId": "0f6e6f89-8270-4f78-9465-4b3f46aa5951"
-      }
+    "runtimeVersion": {
+      "policy": "sdkVersion"
     }
   }
 }
