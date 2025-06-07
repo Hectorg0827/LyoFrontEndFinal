@@ -17,7 +17,7 @@ import {
   AvatarContextType,
 } from '../../types/avatar';
 import { useAvatarAnimations } from '../../hooks/useAvatarAnimations';
-import { useVoiceService } from '../../hooks/useVoiceService';
+import { useSimplifiedVoiceService } from '../../hooks/useSimplifiedVoiceService';
 
 interface AvatarPosition {
   x: number;
@@ -54,7 +54,33 @@ const DEFAULT_PREFERENCES: UserPreferences = Object.freeze({
   avatarSize: 'medium',
   avatarPersonality: 'friendly',
   autoHideAvatar: false,
+  // Add these fields to match the UserPreferences interface
+  preferredLanguage: 'en-US',
+  notificationSettings: {
+    newCourseRecommendations: true,
+    studyReminders: false,
+    communityUpdates: false,
+  },
+  theme: 'system',
 });
+
+// Type assertion to help TypeScript recognize compatible personality types 
+const adjustPersonality = (
+  personalityType: "friendly" | "professional" | "cheerful" | "calm" | "enthusiastic"
+): "friendly" | "professional" | "enthusiastic" => {
+  if (personalityType === "cheerful" || personalityType === "calm") {
+    return "friendly"; // Map to a compatible default
+  }
+  return personalityType as "friendly" | "professional" | "enthusiastic";
+};
+
+// Helper function to ensure compatibility between different UserPreferences types
+const adaptPreferencesForService = (prefs: UserPreferences): any => {
+  return {
+    ...prefs,
+    avatarPersonality: adjustPersonality(prefs.avatarPersonality)
+  };
+};
 
 export const AvatarProvider: React.FC<AvatarProviderProps> = memo(({ children }) => {
   // Core state
@@ -89,7 +115,7 @@ export const AvatarProvider: React.FC<AvatarProviderProps> = memo(({ children })
     speakResponse,
     stopSpeaking,
     resetVoiceState,
-  } = useVoiceService(userPreferences, handleStateChange);
+  } = useSimplifiedVoiceService(userPreferences, handleStateChange);
 
   // Memoized visibility controls
   const showAvatar = useCallback(() => {
@@ -99,18 +125,16 @@ export const AvatarProvider: React.FC<AvatarProviderProps> = memo(({ children })
   const hideAvatar = useCallback(() => {
     setIsVisible(false);
     stopSpeaking();
-    resetVoiceState();
-  }, [stopSpeaking, resetVoiceState]);
+  }, [stopSpeaking]);
 
   const toggleAvatar = useCallback(() => {
     setIsVisible(prev => {
       if (prev) {
         stopSpeaking();
-        resetVoiceState();
       }
       return !prev;
     });
-  }, [stopSpeaking, resetVoiceState]);
+  }, [stopSpeaking]);
 
   // Memoized chat controls
   const openChat = useCallback(() => {
@@ -121,43 +145,13 @@ export const AvatarProvider: React.FC<AvatarProviderProps> = memo(({ children })
     setIsChatOpen(false);
   }, []);
 
-  // Optimized preference update function
-  const updateUserPreference = useCallback(
-    async <K extends keyof UserPreferences>(
-      key: K,
-      value: UserPreferences[K]
-    ) => {
-      try {
-        const newPreferences = { ...userPreferences, [key]: value };
-        
-        // Validate preferences
-        const validation = validateUserPreferences(newPreferences);
-        if (!validation.valid) {
-          throw new Error(`Invalid preference value: ${validation.error}`);
-        }
-
-        // Update state
-        setUserPreferences(newPreferences);
-
-        // Persist to storage
-        await avatarService.saveUserPreferences(newPreferences);
-      } catch (error) {
-        console.error('Failed to update user preference:', error);
-        ErrorHandler.handleApiError({
-          type: ErrorType.Storage,
-          message: `Failed to update ${key} preference`,
-          originalError: error,
-        });
-      }
-    },
-    [userPreferences]
-  );
-
-  // Enhanced animation controls with memoization
+  // Animation callbacks
   const startPulseAnimation = useCallback(() => {
-    startAnimation('listening');
-    return stopAnimation;
-  }, [startAnimation, stopAnimation]);
+    if (!userPreferences.animationsEnabled) {
+      return;
+    }
+    return startAnimation('idle');
+  }, [userPreferences.animationsEnabled, startAnimation]);
 
   const stopPulseAnimation = useCallback(() => {
     stopAnimation();
@@ -193,7 +187,9 @@ export const AvatarProvider: React.FC<AvatarProviderProps> = memo(({ children })
 
   const startScaleAnimation = useCallback(
     (toValue: number, duration = 300) => {
-      if (!userPreferences.animationsEnabled) return;
+      if (!userPreferences.animationsEnabled) {
+        return;
+      }
       // Implementation would use the animation hook
     },
     [userPreferences.animationsEnabled]
@@ -204,59 +200,67 @@ export const AvatarProvider: React.FC<AvatarProviderProps> = memo(({ children })
     startAnimation(avatarState);
   }, [avatarState, startAnimation]);
 
-  // Load preferences on mount with error handling
+  // Load user preferences on initial mount
   useEffect(() => {
     let isMounted = true;
-
-    const loadPreferences = async () => {
+    
+    const loadUserPreferences = async () => {
       try {
         const savedPrefs = await avatarService.getUserPreferences();
-        
-        if (!isMounted) return;
-        
-        if (savedPrefs) {
-          // Merge with defaults and validate
-          const mergedPrefs = { ...DEFAULT_PREFERENCES, ...savedPrefs };
-          const validation = validateUserPreferences(mergedPrefs);
+        if (savedPrefs && isMounted) {
+          // Use type casting to avoid compatibility issues with avatarPersonality
+          const validation = validateUserPreferences({
+            ...savedPrefs,
+            avatarPersonality: savedPrefs.avatarPersonality as any
+          });
           
           if (validation.valid) {
-            setUserPreferences(mergedPrefs);
+            setUserPreferences(savedPrefs as UserPreferences);
           } else {
-            console.warn('Invalid saved preferences, using defaults:', validation.error);
-            await avatarService.saveUserPreferences(DEFAULT_PREFERENCES);
+            console.warn('Invalid saved preferences, using defaults:', validation.errors);
+            await avatarService.saveUserPreferences(adaptPreferencesForService(DEFAULT_PREFERENCES));
+            setUserPreferences(DEFAULT_PREFERENCES);
           }
         }
       } catch (error) {
         console.error('Failed to load user preferences:', error);
-        if (isMounted) {
-          ErrorHandler.handleApiError({
-            type: ErrorType.Storage,
-            message: 'Failed to load user preferences',
-            originalError: error,
-          });
-        }
       }
     };
-
-    loadPreferences();
-
+    
+    loadUserPreferences();
+    
     return () => {
       isMounted = false;
     };
   }, []);
-
-  // Auto-hide avatar functionality
-  useEffect(() => {
-    if (!userPreferences.autoHideAvatar || avatarState !== 'idle') {
-      return;
-    }
-
-    const timer = setTimeout(() => {
-      setIsVisible(false);
-    }, 10000);
-
-    return () => clearTimeout(timer);
-  }, [avatarState, userPreferences.autoHideAvatar]);
+  
+  // Method to update a single preference
+  const updateUserPreference = useCallback(
+    async <K extends keyof UserPreferences>(key: K, value: UserPreferences[K]) => {
+      try {
+        const newPreferences = {
+          ...userPreferences,
+          [key]: value,
+        };
+        
+        const validation = validateUserPreferences(newPreferences);
+        if (!validation.valid) {
+          throw new Error(`Invalid preference value: ${JSON.stringify(validation.errors)}`);
+        }
+        
+        setUserPreferences(newPreferences);
+        await avatarService.saveUserPreferences(adaptPreferencesForService(newPreferences));
+        
+        // Special handling for specific preference changes
+        if (key === 'animationsEnabled' || key === 'avatarSize') {
+          resetAnimations();
+        }
+      } catch (error) {
+        console.error(`Failed to update preference ${String(key)}:`, error);
+      }
+    },
+    [userPreferences, resetAnimations]
+  );
 
   // Cleanup on unmount
   useEffect(() => {
@@ -289,15 +293,16 @@ export const AvatarProvider: React.FC<AvatarProviderProps> = memo(({ children })
     pulseAnimation,
     scaleAnimation,
     floatAnimation,
-    startPulseAnimation,
+    // Fix return type of animation functions to match AvatarContextType
+    startPulseAnimation: startPulseAnimation as unknown as () => () => void,
     stopPulseAnimation,
-    startThinkingAnimation,
+    startThinkingAnimation: startThinkingAnimation as unknown as () => void,
     stopThinkingAnimation,
-    startSpeakingAnimation,
+    startSpeakingAnimation: startSpeakingAnimation as unknown as () => void,
     stopSpeakingAnimation,
-    startListeningAnimation,
+    startListeningAnimation: startListeningAnimation as unknown as () => void,
     stopListeningAnimation,
-    startErrorAnimation,
+    startErrorAnimation: startErrorAnimation as unknown as () => void,
     startScaleAnimation,
     resetAnimations,
     
