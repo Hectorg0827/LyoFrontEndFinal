@@ -26,6 +26,9 @@ import {
   mockCommunityPostsData,
 } from "./mockData";
 
+// Import enhanced mock data from learnService.ts for adaptive learning features
+import { learnService } from "./learnService";
+
 // Simulate API delay
 const simulateDelay = (ms: number = 300) => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -305,6 +308,39 @@ class MockApiService {
     }
     
     return mockLearningToolsData;
+  }
+  
+  async getFeaturedCourses(): Promise<Course[]> {
+    await simulateDelay();
+    
+    if (shouldSimulateError()) {
+      throw new Error("Network error: Failed to get featured courses");
+    }
+    
+    // Use the mock data from learnService
+    return learnService.getFeaturedCourses();
+  }
+  
+  async getCourseCategories(): Promise<{id: string, name: string, courses: Course[]}[]> {
+    await simulateDelay();
+    
+    if (shouldSimulateError()) {
+      throw new Error("Network error: Failed to get course categories");
+    }
+    
+    // Use the mock data from learnService
+    return learnService.getCourseCategories();
+  }
+  
+  async getCoursesByDomainAndLevel(domain: string, level: string): Promise<Course[]> {
+    await simulateDelay();
+    
+    if (shouldSimulateError()) {
+      throw new Error("Network error: Failed to get courses by domain and level");
+    }
+    
+    // Use the mock data from learnService
+    return learnService.getCoursesByDomainAndLevel(domain as any, level as any);
   }
 
   // Avatar methods
