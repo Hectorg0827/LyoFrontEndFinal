@@ -135,13 +135,27 @@ export const ErrorHandler = {
    * Get appropriate error type based on an HTTP status code
    */
   getErrorTypeFromStatus(status: number): ErrorType {
-    if (status >= 500) return ErrorType.Server;
-    if (status === 401) return ErrorType.Auth;
-    if (status === 403) return ErrorType.Permissions;
-    if (status === 404) return ErrorType.NotFound;
-    if (status === 429) return ErrorType.RateLimit;
-    if (status === 409) return ErrorType.Conflict;
-    if (status >= 400) return ErrorType.Validation;
+    if (status >= 500) {
+      return ErrorType.Server;
+    }
+    if (status === 401) {
+      return ErrorType.Auth;
+    }
+    if (status === 403) {
+      return ErrorType.Permissions;
+    }
+    if (status === 404) {
+      return ErrorType.NotFound;
+    }
+    if (status === 429) {
+      return ErrorType.RateLimit;
+    }
+    if (status === 409) {
+      return ErrorType.Conflict;
+    }
+    if (status >= 400) {
+      return ErrorType.Validation;
+    }
     return ErrorType.Unknown;
   },
   
@@ -167,7 +181,10 @@ export const ErrorHandler = {
     } else if (error?.status) {
       // Handle fetch-like errors
       statusCode = error.status;
-      errorType = this.getErrorTypeFromStatus(statusCode);
+      // Only call getErrorTypeFromStatus if statusCode is a number
+      if (typeof statusCode === 'number') {
+        errorType = this.getErrorTypeFromStatus(statusCode);
+      }
       errorMessage = error.data?.message || error.message || errorMessage;
     } else if (error instanceof Error) {
       // Handle standard JS errors
