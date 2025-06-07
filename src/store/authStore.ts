@@ -1,7 +1,9 @@
 import { create } from "zustand";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { persist, createJSONStorage } from "zustand/middleware";
-import ENV from "../config/env";
+import ENV from "@config/env";
+import apiService from "@services/apiService";
+import { ErrorHandler, ErrorType } from "@utils/errorHandler";
 
 // User authentication types
 export interface AuthUser {
@@ -59,56 +61,31 @@ export const useAuthStore = create<AuthState>()(
         set({ isLoading: true, error: null });
         try {
           // In a real app, this would call an API endpoint
-          // For now, we'll simulate a successful login with a mock response
+          const response = await apiService.login({ email, password });
           
-          // Simulate network delay
-          await new Promise(resolve => setTimeout(resolve, 1000));
+          // Store auth token
+          await AsyncStorage.setItem(ENV.AUTH_STORAGE_KEY, response.token);
           
-          if (ENV.USE_BACKEND_API) {
-            // TODO: Call real API endpoint
-            // const response = await apiService.login(email, password);
-            // await AsyncStorage.setItem(ENV.AUTH_STORAGE_KEY, response.token);
-            // set({ isLoading: false, isAuthenticated: true, user: response.user });
-            
-            // Mock for now
-            if (email === 'user@example.com' && password === 'password') {
-              const mockUser: AuthUser = {
-                id: "user-1",
-                email: email,
-                name: "Test User",
-                avatar: "https://via.placeholder.com/150",
-                isVerified: true,
-                createdAt: new Date().toISOString(),
-              };
-              
-              // Store mock token
-              await AsyncStorage.setItem(ENV.AUTH_STORAGE_KEY, 'mock-jwt-token');
-              set({ isLoading: false, isAuthenticated: true, user: mockUser });
-              return true;
-            } else {
-              set({ isLoading: false, error: "Invalid email or password" });
-              return false;
-            }
-          } else {
-            // When using mock data, always succeed with test user
-            const mockUser: AuthUser = {
-              id: "user-1",
-              email: email || "user@example.com",
-              name: "Test User",
-              avatar: "https://via.placeholder.com/150",
-              isVerified: true,
-              createdAt: new Date().toISOString(),
-            };
-            
-            // Store mock token
-            await AsyncStorage.setItem(ENV.AUTH_STORAGE_KEY, 'mock-jwt-token');
-            set({ isLoading: false, isAuthenticated: true, user: mockUser });
-            return true;
-          }
-        } catch (error: any) {
+          // Update state with user data
           set({ 
             isLoading: false, 
-            error: error.message || "Failed to login. Please try again." 
+            isAuthenticated: true, 
+            user: {
+              id: response.user.id,
+              email: response.user.email,
+              name: response.user.name,
+              avatar: response.user.avatar,
+              isVerified: true, // Assuming verified if login successful
+              createdAt: new Date().toISOString() // Might come from response
+            }
+          });
+          
+          return true;
+        } catch (error) {
+          const appError = ErrorHandler.processError(error, "authStore.login");
+          set({ 
+            isLoading: false, 
+            error: appError.getUserFriendlyMessage()
           });
           return false;
         }
@@ -118,47 +95,35 @@ export const useAuthStore = create<AuthState>()(
       register: async (email, password, name) => {
         set({ isLoading: true, error: null });
         try {
-          // Simulate network delay
-          await new Promise(resolve => setTimeout(resolve, 1000));
+          const response = await apiService.register({ 
+            email, 
+            password, 
+            name 
+          });
           
-          if (ENV.USE_BACKEND_API) {
-            // TODO: Call real API endpoint
-            // const response = await apiService.register(email, password, name);
-            // await AsyncStorage.setItem(ENV.AUTH_STORAGE_KEY, response.token);
-            // set({ isLoading: false, isAuthenticated: true, user: response.user });
-            
-            // Mock for now
-            const mockUser: AuthUser = {
-              id: "user-" + Date.now(),
-              email: email,
-              name: name,
-              isVerified: false,
-              createdAt: new Date().toISOString(),
-            };
-            
-            // Store mock token
-            await AsyncStorage.setItem(ENV.AUTH_STORAGE_KEY, 'mock-jwt-token');
-            set({ isLoading: false, isAuthenticated: true, user: mockUser });
-            return true;
-          } else {
-            // When using mock data, always succeed with test user
-            const mockUser: AuthUser = {
-              id: "user-" + Date.now(),
-              email: email,
-              name: name,
-              isVerified: false,
-              createdAt: new Date().toISOString(),
-            };
-            
-            // Store mock token
-            await AsyncStorage.setItem(ENV.AUTH_STORAGE_KEY, 'mock-jwt-token');
-            set({ isLoading: false, isAuthenticated: true, user: mockUser });
-            return true;
-          }
-        } catch (error: any) {
+          // Store auth token
+          await AsyncStorage.setItem(ENV.AUTH_STORAGE_KEY, response.token);
+          
+          // Update state with user data
           set({ 
             isLoading: false, 
-            error: error.message || "Failed to register. Please try again." 
+            isAuthenticated: true, 
+            user: {
+              id: response.user.id,
+              email: response.user.email,
+              name: response.user.name,
+              avatar: response.user.avatar,
+              isVerified: false, // Typically users start unverified
+              createdAt: new Date().toISOString() // Might come from response
+            }
+          });
+          
+          return true;
+        } catch (error) {
+          const appError = ErrorHandler.processError(error, "authStore.register");
+          set({ 
+            isLoading: false, 
+            error: appError.getUserFriendlyMessage()
           });
           return false;
         }
@@ -168,6 +133,13 @@ export const useAuthStore = create<AuthState>()(
       logout: async () => {
         set({ isLoading: true });
         try {
+          // Call logout API if connected
+          try {
+            await apiService.logout();
+          } catch (error) {
+            console.warn("Logout API error (continuing):", error);
+          }
+          
           // Remove token from storage
           await AsyncStorage.removeItem(ENV.AUTH_STORAGE_KEY);
           
@@ -177,11 +149,12 @@ export const useAuthStore = create<AuthState>()(
             isAuthenticated: false, 
             user: null 
           });
-        } catch (error: any) {
-          console.error("Logout error:", error);
+        } catch (error) {
+          const appError = ErrorHandler.processError(error, "authStore.logout");
+          console.error("Logout error:", appError);
           set({ 
             isLoading: false, 
-            error: error.message || "Failed to logout. Please try again." 
+            error: appError.getUserFriendlyMessage()
           });
         }
       },
@@ -198,45 +171,78 @@ export const useAuthStore = create<AuthState>()(
             return false;
           }
           
-          if (ENV.USE_BACKEND_API) {
-            // TODO: Validate token with API
-            // const user = await apiService.validateToken(token);
-            // set({ isLoading: false, isAuthenticated: true, user });
+          // Set token in API service
+          apiService.setToken(token);
+          
+          // Get user profile
+          try {
+            const userProfile = await apiService.getUserProfile();
             
-            // Mock for now
-            const mockUser: AuthUser = {
-              id: "user-1",
-              email: "user@example.com",
-              name: "Test User",
-              avatar: "https://via.placeholder.com/150",
-              isVerified: true,
-              createdAt: new Date().toISOString(),
-            };
+            set({ 
+              isLoading: false, 
+              isAuthenticated: true, 
+              user: {
+                id: userProfile.id,
+                name: userProfile.name,
+                email: userProfile.email,
+                avatar: userProfile.avatar,
+                isVerified: true, // Assuming verified if profile is fetched
+                createdAt: userProfile.createdAt || new Date().toISOString()
+              }
+            });
             
-            set({ isLoading: false, isAuthenticated: true, user: mockUser });
             return true;
-          } else {
-            // When using mock data, always return a valid session
+          } catch (error) {
+            // If profile fetch fails, token might be invalid
+            const appError = ErrorHandler.processError(error, "authStore.checkAuth");
+            
+            // Only clear auth if it's an auth error (401)
+            if (ErrorHandler.isErrorType(appError, ErrorType.Auth)) {
+              await AsyncStorage.removeItem(ENV.AUTH_STORAGE_KEY);
+              apiService.clearToken();
+              
+              set({ 
+                isLoading: false, 
+                isAuthenticated: false, 
+                user: null,
+                error: "Session expired. Please login again."
+              });
+              return false;
+            }
+            
+            // For other errors, try mock user but keep token
+            // (network issues might prevent profile fetch but token could still be valid)
             const mockUser: AuthUser = {
-              id: "user-1",
+              id: "user-fallback",
               email: "user@example.com",
-              name: "Test User",
-              avatar: "https://via.placeholder.com/150",
+              name: "User",
               isVerified: true,
               createdAt: new Date().toISOString(),
             };
             
-            set({ isLoading: false, isAuthenticated: true, user: mockUser });
+            set({ 
+              isLoading: false, 
+              isAuthenticated: true, 
+              user: mockUser,
+              // Don't set error for network issues to avoid confusion
+              error: ErrorHandler.isErrorType(appError, ErrorType.Network) ? null : appError.getUserFriendlyMessage()
+            });
+            
             return true;
           }
-        } catch (error: any) {
-          // Invalid token or error, clear auth state
+        } catch (error) {
+          // Handle errors outside the try block (e.g., AsyncStorage errors)
+          const appError = ErrorHandler.processError(error, "authStore.checkAuth");
+          
+          // Invalid token or other critical error, clear auth state
           await AsyncStorage.removeItem(ENV.AUTH_STORAGE_KEY);
+          apiService.clearToken();
+          
           set({ 
             isLoading: false, 
             isAuthenticated: false, 
             user: null,
-            error: error.message || "Session expired. Please login again." 
+            error: appError.getUserFriendlyMessage()
           });
           return false;
         }
@@ -245,8 +251,7 @@ export const useAuthStore = create<AuthState>()(
       // Refresh authentication token
       refreshAuth: async () => {
         try {
-          // In a real app, this would refresh the JWT token
-          // For now, we'll just check if the current token exists
+          // Get current token
           const token = await AsyncStorage.getItem(ENV.AUTH_STORAGE_KEY);
           
           if (!token) {
@@ -254,16 +259,22 @@ export const useAuthStore = create<AuthState>()(
             return false;
           }
           
-          // Mock: Set a new token
-          await AsyncStorage.setItem(ENV.AUTH_STORAGE_KEY, 'mock-jwt-token-' + Date.now());
+          // In a real implementation, would call refresh token API
+          // For now, assume token is still valid
+          // TODO: Implement proper token refresh with apiService
+          
           return true;
-        } catch (error: any) {
-          console.error("Refresh token error:", error);
+        } catch (error) {
+          const appError = ErrorHandler.processError(error, "authStore.refreshAuth");
+          console.error("Refresh token error:", appError);
+          
           await AsyncStorage.removeItem(ENV.AUTH_STORAGE_KEY);
+          apiService.clearToken();
+          
           set({ 
             isAuthenticated: false, 
             user: null,
-            error: error.message || "Failed to refresh session. Please login again." 
+            error: appError.getUserFriendlyMessage()
           });
           return false;
         }
@@ -273,17 +284,14 @@ export const useAuthStore = create<AuthState>()(
       resetPassword: async (email) => {
         set({ isLoading: true, error: null });
         try {
-          // Simulate network delay
-          await new Promise(resolve => setTimeout(resolve, 1000));
-          
-          // In a real app, this would call an API endpoint
-          // For now, always succeed
+          await apiService.post('/auth/reset-password', { email });
           set({ isLoading: false });
           return true;
-        } catch (error: any) {
+        } catch (error) {
+          const appError = ErrorHandler.processError(error, "authStore.resetPassword");
           set({ 
             isLoading: false, 
-            error: error.message || "Failed to reset password. Please try again." 
+            error: appError.getUserFriendlyMessage()
           });
           return false;
         }
