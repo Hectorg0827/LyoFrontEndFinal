@@ -4,7 +4,7 @@
 import { memo } from 'react';
 
 // Import the optimized components
-import { AvatarOptimized } from './AvatarOptimized';
+import AvatarOptimized from './AvatarOptimized'; // Changed to default import
 import { AvatarContextOptimized, useAvatarOptimized } from './AvatarContextOptimized';
 
 // Re-export the optimized version as the default Avatar
