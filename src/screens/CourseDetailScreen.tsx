@@ -380,10 +380,12 @@ const CourseDetailScreen: React.FC<Props> = ({ route, navigation }) => {
                   ]}
                   onPress={() => {
                     if (activeCourse.progress > 0 || index === 0) {
-                      // TODO: Navigate to lesson screen
-                      console.log("Navigate to lesson:", lesson.id);
+                      navigation.navigate("Lesson", { id: lesson.id });
                     } else {
-                      Alert.alert("Locked", "You need to enroll in this course first.");
+                      Alert.alert(
+                        "Locked",
+                        "You need to enroll in this course first."
+                      );
                     }
                   }}
                 >
@@ -406,9 +408,12 @@ const CourseDetailScreen: React.FC<Props> = ({ route, navigation }) => {
                       <TouchableOpacity
                         onPress={() => {
                           if (activeCourse.progress > 0 || index === 0) {
-                            // TODO: Navigate to lesson
+                            navigation.navigate("Lesson", { id: lesson.id });
                           } else {
-                            Alert.alert("Locked", "You need to enroll in this course first.");
+                            Alert.alert(
+                              "Locked",
+                              "You need to enroll in this course first."
+                            );
                           }
                         }}
                       >
