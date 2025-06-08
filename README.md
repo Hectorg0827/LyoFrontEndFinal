@@ -160,6 +160,18 @@ npx expo start
 
 Make sure your iOS simulator or physical device is on the same network as your computer so it can connect to the development server.
 
+### Starting the backend server
+
+The project includes a small Node.js backend used for local development. After
+cloning the repo, make the startup script executable and run it:
+
+```bash
+chmod +x start-backend.sh  # first time only
+./start-backend.sh
+```
+
+This launches `server.js` on port `8000` so the app can connect to the mock API.
+
 ## Environment Configuration
 
 The app uses different environment configurations based on the build profile:
