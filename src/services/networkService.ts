@@ -1,5 +1,5 @@
-// Using expo's Network utility instead of react-native-community/netinfo
-import * as Network from "expo-network";
+// Network utilities leveraged from @react-native-community/netinfo
+import NetInfo from "@react-native-community/netinfo";
 
 import { ErrorHandler, ErrorType } from "./errorHandler";
 
@@ -9,8 +9,8 @@ class NetworkService {
    * @returns Promise<boolean> - True if connected, false if not
    */
   async isConnected(): Promise<boolean> {
-    const state = await Network.getNetworkStateAsync();
-    return state.isConnected;
+    const state = await NetInfo.fetch();
+    return state.isConnected === true && state.isInternetReachable !== false;
   }
 
   /**
@@ -50,7 +50,7 @@ class NetworkService {
    */
   addNetworkListener(callback: (isConnected: boolean) => void): () => void {
     const unsubscribe = NetInfo.addEventListener((state) => {
-      callback(!!state.isConnected);
+      callback(state.isConnected === true && state.isInternetReachable !== false);
     });
 
     return unsubscribe;
