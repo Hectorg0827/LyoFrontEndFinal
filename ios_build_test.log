@@ -1,9 +1,0 @@
-env: load .env.development .env
-env: export API_URL API_BASE_URL ENVIRONMENT STORAGE_PREFIX APP_ENV FEATURE_FLAGS DEBUG_MODE OPENAI_API_KEY ANALYTICS_KEY ANOTHER_VARIABLE
-› Planning build
-❌  LyoAILearningAssistant/LyoAILearningAssistant: Unable to open base configuration reference file '/Users/republicalatuya/Desktop/LyoFrontEndFinal/ios/Pods/Target Support Files/Pods-LyoAILearningAssistant/Pods-LyoAILearningAssistant.debug.xcconfig'.
-   └─/Users/republicalatuya/Desktop/LyoFrontEndFinal/ios/LyoAILearningAssistant.xcodeproj
-
-› 1 error(s), and 0 warning(s)
-
-CommandError: Failed to build iOS project. "xcodebuild" exited with error code 65.

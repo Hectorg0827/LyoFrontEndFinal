@@ -83,6 +83,10 @@ local.properties
 node_modules/
 npm-debug.log
 yarn-error.log
+# Log files
+*.log
+build.log
+metro.log
 
 # Bundle artifacts
 *.jsbundle
