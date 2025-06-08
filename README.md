@@ -148,6 +148,18 @@ For more detailed instructions, refer to:
 - `COMPREHENSIVE_IOS_BUILD_GUIDE.md` - Complete iOS build guide
 - `BUILD_STATUS_FINAL.md` - Current build status and fixes applied
 
+### Running the development server
+
+Before launching the app, start the Metro bundler:
+
+```bash
+npm start
+# or
+npx expo start
+```
+
+Make sure your iOS simulator or physical device is on the same network as your computer so it can connect to the development server.
+
 ## Environment Configuration
 
 The app uses different environment configurations based on the build profile:
