@@ -8,7 +8,6 @@
     "build:android": "./scripts/build-android.sh",
     "lint": "./scripts/lint.sh",
     "clean": "rm -rf node_modules ios/Pods ios/build android/.gradle android/app/build && npm install",
-    "postinstall": "patch-package",
     "android": "expo run:android",
     "ios": "expo run:ios"
   },
