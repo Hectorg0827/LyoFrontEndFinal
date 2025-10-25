@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const { v4: uuidv4 } = require('uuid');
+const { ORCHESTRATOR_SYSTEM_PROMPT } = require('./prompts/orchestratorPrompt');
 
 const app = express();
 const PORT = 8000;
@@ -98,6 +99,15 @@ app.get('/api/v1/health', (req, res) => {
     message: 'Lyo Backend is running',
     timestamp: new Date().toISOString(),
     version: '1.0.0'
+  });
+});
+
+// Orchestrator prompt endpoint
+app.get('/api/v1/orchestrator/system-prompt', (req, res) => {
+  res.json({
+    prompt: ORCHESTRATOR_SYSTEM_PROMPT,
+    updatedAt: new Date().toISOString(),
+    length: ORCHESTRATOR_SYSTEM_PROMPT.length
   });
 });
 
