@@ -7,6 +7,7 @@ A React Native mobile application for an AI-powered learning assistant with pers
 - [Features](#features)
 - [Setup and Installation](#setup-and-installation)
 - [Running the App](#running-the-app)
+- [Starting the Backend](#starting-the-backend)
 - [iOS Build Guide](#ios-build-guide)
 - [Environment Configuration](#environment-configuration)
 - [Project Structure](#project-structure)
@@ -101,6 +102,15 @@ npm run build:ios
 yarn build:android
 # or
 npm run build:android
+```
+
+## Starting the Backend
+
+Run the Node.js backend before launching the app:
+
+```bash
+chmod +x start-backend.sh
+./start-backend.sh
 ```
 
 ## iOS Build Guide
