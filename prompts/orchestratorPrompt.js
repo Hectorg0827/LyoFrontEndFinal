@@ -251,6 +251,67 @@ What you can do next in code:
 • and ask Gemini to return ONLY valid JSON.
 
 This gives you predictable output, scalable intelligence, and a unified brain across all agents.
+
+⸻
+
+7. PREFAB-FIRST MATCHING & AI FALLBACK (MANDATORY IMPLEMENTATION PATTERN)
+
+You must orchestrate every evaluation using a prefab-first approach before engaging any large language model personalization. This guarantees instant value for the user and keeps AI compute focused on edge cases.
+
+7.1 Fast Prefab Snapshot (≤ 2–5 seconds)
+• Immediately map the user to a canonical prefab occupation (target ~1,000 roles, O*NET-scale coverage).
+• Render a prefab snapshot containing: risk band, top adjacent roles, three missing skills, and a 7-day micro-plan.
+• Kick off a micro-task instantly (e.g., the first fast_upskills microplan entry) so the user always has something actionable while deeper analysis streams.
+
+7.2 Prefab Entry Schema (what every prefab must provide)
+{
+  "occ_id": 214,
+  "title": "Data Analyst",
+  "risk_band": "Medium",
+  "risk_percentile": 0.62,
+  "core_skills": ["SQL", "Excel", "Python", "Data Viz", "Statistics"],
+  "gaps_by_level": {
+    "junior": ["A/B Testing", "Tableau/Power BI"],
+    "mid": ["ETL", "Experiment Design"],
+    "senior": ["Stakeholder Mgmt", "Forecasting"]
+  },
+  "adjacent_roles": [
+    { "title": "BI Analyst", "overlap": 0.78 },
+    { "title": "Product Analyst", "overlap": 0.74 },
+    { "title": "Ops Analyst", "overlap": 0.69 }
+  ],
+  "fast_upskills": [
+    { "skill": "Tableau", "microplan": ["Intro (30m)", "Build 2 dashboards", "Publish & share"] },
+    { "skill": "Experiment Design", "microplan": ["AB basics", "Power & sample size", "Case study"] }
+  ],
+  "job_clusters": ["Analytics", "Product", "Ops"],
+  "sample_prompts": {
+    "resume_bullet": "Increased campaign ROI by 18% using SQL cohorting and A/B testing.",
+    "cover_letter": "My analyses drive action: at X, I..."
+  }
+}
+
+7.3 Mapping Algorithm (cheap first, robust fallback)
+1. Title normalization (lowercase, strip company tokens, alias Levenshtein) maps resumes like “bus intel analyst” to canonical titles.
+2. Skill ping (count hits from a 300–500 skill dictionary) boosts roles whose title match + skill overlap score is highest.
+3. Fallback embeddings (ANN index) trigger only if confidence < threshold to choose the prefab.
+4. Out-of-distribution cases fall back to job-family prefabs and immediately start deep AI analysis.
+
+7.4 Streaming AI Refinements (15–120 seconds, never block UI)
+• Background AI personalizes risk, adds local salary bands, rewrites micro-plans with user history, and re-ranks job matches using embeddings + current postings.
+• Stream refinements chunk-by-chunk (re_ranked_matches, personalized_plan, etc.) and merge into the UI without interrupting the prefab snapshot.
+
+7.5 Guardrails & Telemetry
+• Version prefabs (e.g., v2025.10), refresh monthly, diff changes, and surface “Updated Oct 2025.”
+• Show a “Detected: {role}” pill with a one-tap change menu; adapt instantly if the user corrects the mapping.
+• Track prefab hit rate, time-to-first-value (<5s), pre-refinement engagement, and correction rate to continually improve the alias list.
+
+7.6 Build Plan (two sprints)
+Sprint 1: canonical role catalog, alias lists, skill dictionary, prefab JSON loader, mapper (title + skills), snapshot UI, detected-role pill, micro-task start.
+Sprint 2: ANN fallback for long-tail titles, streaming refinement pipeline + UI merge, prefab versioning, telemetry dashboard.
+
+Bottom line: Use prefab-first, AI-later. Deliver instant actionable guidance, then quietly personalize with background AI so no user waits on loading spinners.
+
 `;
 
 module.exports = {
